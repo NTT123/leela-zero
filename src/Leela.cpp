@@ -20,6 +20,8 @@
 
 #ifdef USE_WEBGL
 #include <emscripten.h>
+#include "UCTSearch.h"
+#include "UCTNode.h"
 #endif
 
 #include <cstdio>
@@ -231,6 +233,7 @@ void parse_commandline(int argc, char *argv[], bool & gtp_mode) {
 #ifdef USE_WEBGL
 void mainloop();
 GameState MAINGAME; // maingame = std::make_unique<GameState>();
+std::unique_ptr<UCTSearch> SEARCH;
 float * input_buf;
 float * output_buf;
 #endif
@@ -300,7 +303,7 @@ int main (int argc, char *argv[]) {
 #else
     /* set board limits */
     float komi = 7.5;
-	emscripten_set_main_loop(mainloop, 1, 0);
+	emscripten_set_main_loop(mainloop, 10, 0);
 	MAINGAME.init_game(19, komi);
 #endif
 
@@ -310,12 +313,65 @@ int main (int argc, char *argv[]) {
 #ifdef USE_WEBGL
 bool input_waiting = false;
 char myinput[1000];
+int mystatus = 0; //   0 : do nothing
+                  //   1 : thinking
+                  //   2 : move now
 void mainloop() {
+
+    if (mystatus == 1) {
+        SEARCH->mythink();
+        if (SEARCH->playout_limit_reached()) {
+            SEARCH->end_think();
+            mystatus = 2;
+        }
+
+        return;
+    }
+
+    if (mystatus == 2) {
+        MAINGAME.play_move(SEARCH->color, SEARCH->mymove);
+
+        std::string vertex = MAINGAME.move_to_text(SEARCH->mymove);
+        gtp_printf(0, "%s", vertex.c_str());
+        mystatus = 0;
+
+        return;
+    }
 
     if (input_waiting) {
         input_waiting = false;
         Utils::log_input(myinput);
-        GTP::execute(MAINGAME, myinput);
+
+
+        std::string command(myinput);
+        if (command.find("genmove") == 0) {
+            std::istringstream cmdstream(command);
+            std::string tmp;
+
+            SEARCH = std::make_unique<UCTSearch>(MAINGAME);
+
+            cmdstream >> tmp;  // eat genmove
+            cmdstream >> tmp;
+
+            if (!cmdstream.fail()) {
+                int who = 0;
+                if (tmp == "w" || tmp == "white") {
+                    who = FastBoard::WHITE;
+                } else if (tmp == "b" || tmp == "black") {
+                    who = FastBoard::BLACK;
+                } else {
+                }
+                // start thinking
+                {
+                    SEARCH->init_mythink(who);
+                    mystatus = 1; // think now!
+                }
+            } else {
+                gtp_fail_printf(0, "syntax not understood");
+            }
+        } else {
+            GTP::execute(MAINGAME, myinput);
+        }
     }
 }
 

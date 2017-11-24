@@ -325,6 +325,84 @@ void UCTSearch::increment_playouts() {
     m_playouts++;
 }
 
+void UCTSearch::init_mythink(int color_, passflag_t passflag_) {
+    color = color_;
+    passflag = passflag_;
+    assert(m_playouts == 0);
+    assert(m_nodes == 0);
+
+    // Start counting time for us
+    m_rootstate.start_clock(color);
+
+    // set side to move
+    m_rootstate.board.set_to_move(color);
+
+    // set up timing info
+
+    // create a sorted list off legal moves (make sure we
+    // play something legal and decent even in time trouble)
+    float root_eval;
+    m_root.create_children(m_nodes, m_rootstate, root_eval);
+    m_root.kill_superkos(m_rootstate);
+    if (cfg_noise) {
+        m_root.dirichlet_noise(0.25f, 0.03f);
+    }
+
+    myprintf("NN eval=%f\n",
+             (color == FastBoard::BLACK ? root_eval : 1.0f - root_eval));
+
+    m_run = true;
+
+}
+
+void UCTSearch::mythink() {
+    Time start;
+    auto time_for_move = 1000; // m_rootstate.get_timecontrol().max_time_for_move(color);
+    int last_update = 0;
+    bool keeprunning = true;
+    do {
+        auto currstate = std::make_unique<GameState>(m_rootstate);
+
+        auto result = play_simulation(*currstate, &m_root);
+        if (result.valid()) {
+            increment_playouts();
+        }
+
+        Time elapsed;
+        int centiseconds_elapsed = Time::timediff(start, elapsed);
+
+        // output some stats every few seconds
+        // check if we should still search
+        if (centiseconds_elapsed - last_update > 250) {
+            last_update = centiseconds_elapsed;
+            dump_analysis(static_cast<int>(m_playouts));
+        }
+        keeprunning  = is_running();
+        keeprunning &= (centiseconds_elapsed < time_for_move);
+        keeprunning &= !playout_limit_reached();
+    } while(keeprunning);
+}
+
+
+void UCTSearch::end_think() {
+    // stop the search
+    m_run = false;
+    m_rootstate.stop_clock(color);
+
+    if (!m_root.has_children()) {
+        mymove = FastBoard::PASS;
+        return;
+    }
+
+    // display search info
+    myprintf("\n");
+
+    dump_stats(m_rootstate, m_root);
+    Training::record(m_rootstate, m_root);
+
+    mymove = get_best_move(passflag);
+}
+
 int UCTSearch::think(int color, passflag_t passflag) {
     assert(m_playouts == 0);
     assert(m_nodes == 0);

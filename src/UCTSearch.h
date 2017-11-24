@@ -74,6 +74,14 @@ public:
     void set_analyzing(bool flag);
     void set_quiet(bool flag);
     void ponder();
+#ifdef USE_WEBGL
+    void init_mythink(int color, passflag_t passflag = NORMAL);
+    void mythink();
+    void end_think();
+    int color;
+    int mymove;
+    passflag_t passflag;
+#endif
     bool is_running() const;
     bool playout_limit_reached() const;
     void increment_playouts();
