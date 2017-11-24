@@ -34,7 +34,9 @@
 #include "Utils.h"
 #include "GTP.h"
 
+#ifndef USE_WEBGL
 Utils::ThreadPool thread_pool;
+#endif
 
 bool Utils::input_pending(void) {
 #ifdef HAVE_SELECT

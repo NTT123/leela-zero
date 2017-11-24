@@ -21,6 +21,10 @@
 #include <thread>
 #include "config.h"
 
+#ifdef USE_WEBGL
+#include <emscripten.h>
+#endif
+
 #include "Random.h"
 #include "Utils.h"
 
@@ -31,8 +35,12 @@ Random* Random::get_Rng(void) {
 
 Random::Random(int seed) {
     if (seed == -1) {
+#ifdef USE_WEBGL
+        size_t thread_id = (size_t)(emscripten_random());
+#else
         size_t thread_id =
             std::hash<std::thread::id>()(std::this_thread::get_id());
+#endif
         seedrandom((uint32)time(0) ^ (uint32)thread_id);
     } else {
         seedrandom(seed);

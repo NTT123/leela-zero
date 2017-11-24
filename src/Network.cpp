@@ -17,6 +17,11 @@
 */
 
 #include "config.h"
+
+#ifdef USE_WEBGL
+#include <emscripten.h>
+#endif
+
 #include <algorithm>
 #include <cassert>
 #include <iostream>
@@ -85,6 +90,7 @@ std::array<float, 1> ip2_val_b;
 
 void Network::benchmark(GameState * state) {
     {
+#ifndef USE_WEBGL
         int BENCH_AMOUNT = 1600;
         int cpus = cfg_num_threads;
         int iters_per_thread = (BENCH_AMOUNT + (cpus - 1)) / cpus;
@@ -108,6 +114,7 @@ void Network::benchmark(GameState * state) {
                  BENCH_AMOUNT,
                  (float)Time::timediff(start,end)/100.0,
                  (int)((float)BENCH_AMOUNT/((float)Time::timediff(start,end)/100.0)));
+#endif
     }
 }
 
@@ -428,7 +435,31 @@ Network::Netresult Network::get_scored_moves_internal(
             }
         }
     }
-#ifdef USE_OPENCL
+#ifdef USE_WEBGL
+    // transpose data to WEBGL format
+    extern float * input_buf;
+    extern float * output_buf;
+
+    for (int c = 0; c < channels; ++c) {
+        for (int h = 0; h < height; ++h) {
+            for (int w = 0; w < width; ++w) {
+                auto rot_idx = rotate_nn_idx(h * 19 + w, rotation);
+                input_buf[h * channels * width + w*channels + c] = input_data[(c * height + h) * width + w];
+            }
+        }
+    }
+
+    // call forward function
+    EM_ASM(
+        forwardjs();
+    );
+
+    float winrate_sig =  (1.0f + output_buf[height*width+1]) / 2.0f;
+
+    policy_out.assign(output_buf, output_buf + width * height + 1);
+    softmax(policy_out, softmax_data, cfg_softmax_temp);
+    std::vector<float>& outputs = softmax_data;
+#elif defined(USE_OPENCL)
     opencl_net.forward(input_data, output_data);
     // Get the moves
     convolve<1, 2>(output_data, conv_pol_w, conv_pol_b, policy_data_1);

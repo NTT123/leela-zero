@@ -22,9 +22,12 @@
 #include "config.h"
 #include <string>
 #include <atomic>
+
+#ifndef USE_WEBGL
 #include "ThreadPool.h"
 
 extern Utils::ThreadPool thread_pool;
+#endif
 
 namespace Utils {
     void myprintf(const char *fmt, ...);

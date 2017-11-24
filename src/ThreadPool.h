@@ -36,6 +36,7 @@
 
 namespace Utils {
 
+#ifndef WEBGL
 class ThreadPool {
 public:
     ThreadPool() = default;
@@ -123,4 +124,5 @@ private:
 
 }
 
+#endif
 #endif

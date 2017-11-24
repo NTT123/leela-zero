@@ -32,10 +32,11 @@
 #endif
 
 /* Features */
-#define USE_BLAS
-#define USE_OPENBLAS
+//#define USE_BLAS
+//#define USE_OPENBLAS
 //#define USE_MKL
-#define USE_OPENCL
+//#define USE_OPENCL
+#define USE_WEBGL
 //#define USE_TUNER
 
 #define PROGRAM_NAME "Leela Zero"

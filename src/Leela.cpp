@@ -18,6 +18,10 @@
 
 #include "config.h"
 
+#ifdef USE_WEBGL
+#include <emscripten.h>
+#endif
+
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -31,7 +35,10 @@
 #include "SMP.h"
 #include "Random.h"
 #include "Utils.h"
+
+#ifndef USE_WEBGL
 #include "ThreadPool.h"
+#endif
 
 using namespace Utils;
 
@@ -221,6 +228,13 @@ void parse_commandline(int argc, char *argv[], bool & gtp_mode) {
 #endif
 }
 
+#ifdef USE_WEBGL
+void mainloop();
+GameState MAINGAME; // maingame = std::make_unique<GameState>();
+float * input_buf;
+float * output_buf;
+#endif
+
 int main (int argc, char *argv[]) {
     bool gtp_mode = false;
     std::string input;
@@ -244,7 +258,10 @@ int main (int argc, char *argv[]) {
         license_blurb();
     }
 
+#ifndef USE_WEBGL
+    printf("WTF\n");
     thread_pool.initialize(cfg_num_threads);
+#endif
 
     // Use deterministic random numbers for hashing
     auto rng = std::make_unique<Random>(5489);
@@ -253,6 +270,7 @@ int main (int argc, char *argv[]) {
     // Initialize network
     Network::initialize();
 
+#ifndef USE_WEBGL
     auto maingame = std::make_unique<GameState>();
 
     /* set board limits */
@@ -279,6 +297,41 @@ int main (int argc, char *argv[]) {
             cfg_logfile_handle = fopen(cfg_logfile.c_str(), "a");
         }
     }
+#else
+    /* set board limits */
+    float komi = 7.5;
+	emscripten_set_main_loop(mainloop, 1, 0);
+	MAINGAME.init_game(19, komi);
+#endif
 
     return 0;
 }
+
+#ifdef USE_WEBGL
+bool input_waiting = false;
+char myinput[1000];
+void mainloop() {
+
+    if (input_waiting) {
+        input_waiting = false;
+        Utils::log_input(myinput);
+        GTP::execute(MAINGAME, myinput);
+    }
+}
+
+extern "C" {
+
+#include <string.h>
+void set_input_buffer(float * buf) {
+    input_buf = buf;
+}
+void set_output_buffer(float * buf) {
+    output_buf = buf;
+}
+void sendcmd(char * input){
+    strcpy(myinput, input);
+    input_waiting = 1;
+}
+
+}
+#endif

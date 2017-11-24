@@ -356,11 +356,13 @@ int UCTSearch::think(int color, passflag_t passflag) {
              (color == FastBoard::BLACK ? root_eval : 1.0f - root_eval));
 
     m_run = true;
+#ifndef USE_WEBGL
     int cpus = cfg_num_threads;
     ThreadGroup tg(thread_pool);
     for (int i = 1; i < cpus; i++) {
         tg.add_task(UCTWorker(m_rootstate, this, &m_root));
     }
+#endif
 
     bool keeprunning = true;
     int last_update = 0;
@@ -388,7 +390,9 @@ int UCTSearch::think(int color, passflag_t passflag) {
 
     // stop the search
     m_run = false;
+#ifndef USE_WEBGL
     tg.wait_all();
+#endif
     m_rootstate.stop_clock(color);
     if (!m_root.has_children()) {
         return FastBoard::PASS;
@@ -418,11 +422,13 @@ void UCTSearch::ponder() {
     assert(m_nodes == 0);
 
     m_run = true;
+#ifndef USE_WEBGL
     int cpus = cfg_num_threads;
     ThreadGroup tg(thread_pool);
     for (int i = 1; i < cpus; i++) {
         tg.add_task(UCTWorker(m_rootstate, this, &m_root));
     }
+#endif
     do {
         auto currstate = std::make_unique<GameState>(m_rootstate);
         auto result = play_simulation(*currstate, &m_root);
@@ -433,7 +439,9 @@ void UCTSearch::ponder() {
 
     // stop the search
     m_run = false;
+#ifndef USE_WEBGL
     tg.wait_all();
+#endif
     // display search info
     myprintf("\n");
     dump_stats(m_rootstate, m_root);
