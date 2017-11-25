@@ -18,6 +18,10 @@
 
 #include "config.h"
 
+#ifdef USE_WEBGL
+#include <emscripten.h>
+#endif
+
 #include <assert.h>
 #include <limits.h>
 #include <cmath>
@@ -376,8 +380,13 @@ void UCTSearch::mythink() {
         keeprunning  = is_running();
         keeprunning &= !playout_limit_reached();
 
-        if (count > 5) break;
+        if (count > 10) break;
     } while(keeprunning);
+    EM_ASM ({
+        var elem = document.getElementById("myBar"); 
+        elem.style.width = $0 + '%'; 
+        
+    }, m_playouts*100.0 / m_maxplayouts);
 }
 
 
