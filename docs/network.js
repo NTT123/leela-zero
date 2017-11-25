@@ -16,8 +16,6 @@ var compile = function () {
 
                         console.groupCollapsed('compiling');
 
-                        if (options.layerPause) prog = createProgress('compiling network', options.progressContainer);
-
                         lastFrame = Date.now();
 
                     case 6:
@@ -74,22 +72,8 @@ var compile = function () {
                         info[layer.name].deps = deps;
                         finished++;
 
-                        if (!options.layerPause) {
-                            _context.next = 32;
-                            break;
-                        }
-
-                        prog.value = finished / network.length;
-
-                        if (!(Date.now() - lastFrame > 10)) {
-                            _context.next = 32;
-                            break;
-                        }
-
-                        _context.next = 31;
-                        return new Promise(function (resolve) {
-                            return requestAnimationFrame(resolve);
-                        });
+                        _context.next = 32;
+                        break;
 
                     case 31:
                         lastFrame = Date.now();
@@ -149,8 +133,6 @@ var compile = function () {
                     case 54:
                         console.groupEnd('compiling');
                         console.timeEnd('compiling network');
-
-                        if (options.layerPause) prog.destroy();
 
                         return _context.abrupt('return', {
                             network: network,

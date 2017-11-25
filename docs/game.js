@@ -35,7 +35,7 @@ var readMove = function (txt) {
             putMove(move);
             
         } else if (move == "resign") {
-            myGame['resignation'] = myGame['backtoMove'];
+            myGame['resignation'] = myGame['blacktoMove'];
         } else {
             myGame['passes'] = 0;
             putMove(move);
@@ -46,13 +46,18 @@ var readMove = function (txt) {
 
 var nextMove = function () {
     if (myGame['resignation'] || myGame['passes'] > 1 || myGame['moveNum'] > 19 * 19 * 2) {
-        console.error("END GAME!");
+        console.log("END GAME!");
         writeSgf();
     } else {
-        myGame['backToMove'] = !myGame['backToMove'];
+        myGame['blackToMove'] = !myGame['blackToMove'];
         moveGame();
     }
 };
+
+var getScore = function () {
+    Module.sendcmd("final_score");
+};
+
 
 var writeSgf = function () {
     Module.sendcmd("printsgf " + bestNetworkHash + ".sgf");
@@ -73,11 +78,12 @@ var sendGoogle = function () {
         if (filearray[i] == 0) break;
 
     var game = new TextDecoder("utf-8").decode(filearray.slice(0, i));
+    var mygame = game.replace(/hello/i, bestNetworkHash.substring(0,8));
     console.log("Saving the game.");
-    console.log(game);
+    console.log(mygame);
 
     var ifrm = document.createElement("frame");
-    ifrm.setAttribute("src", encodeURI("https://docs.google.com/forms/d/e/1FAIpQLSeMsbKnSJoNXe6i4qpPvuA8HwJsiPCULMn3LqrmKeDjH4juKg/formResponse?entry.1371348489=" + game));
+    ifrm.setAttribute("src", encodeURI("https://docs.google.com/forms/d/e/1FAIpQLSeMsbKnSJoNXe6i4qpPvuA8HwJsiPCULMn3LqrmKeDjH4juKg/formResponse?entry.1371348489=") + encodeURIComponent(mygame));
 
     document.body.appendChild(ifrm);
     ifrm.onload= function() { 
