@@ -443,7 +443,6 @@ Network::Netresult Network::get_scored_moves_internal(
     for (int c = 0; c < channels; ++c) {
         for (int h = 0; h < height; ++h) {
             for (int w = 0; w < width; ++w) {
-                auto rot_idx = rotate_nn_idx(h * 19 + w, rotation);
                 input_buf[h * channels * width + w*channels + c] = input_data[(c * height + h) * width + w];
             }
         }
