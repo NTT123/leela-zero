@@ -11,7 +11,7 @@ var loadNetwork = function () {
                     case 0:
                         _context.next = 2;
                         return 0;
-                        // return _context.abrupt('return', lastNetwork);
+                    // return _context.abrupt('return', lastNetwork);
 
                     case 2:
                         _context.next = 4;

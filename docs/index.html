@@ -40,7 +40,22 @@
 
 <body style="height:100%; width:100%; overflow:hidden;">
 
-	<h1>Leela Z</h1>
+	<h1>Leela Z(ero)</h1>
+	<p>Leela Z plays against itself on your browser. </p>
+	<p>Get lastest updates about Leela Z at
+		<a href="http://zero.sjeng.org/">zero.sjeng.org</a>.
+	</p>
+	<p>If you can run the native version of Leela Zero at
+		<a href="https://github.com/gcp/leela-zero">github.com/gcp/leela-zero</a>,
+		<br /> please do so for better performance.
+	</p>
+
+	<p>All games created by this site are saved at
+		<a href="https://docs.google.com/spreadsheets/d/18LEHJzJ9H5HnIFNZL4Mf8H1HtQGvWX4KikHQJs8hXgc/edit?usp=sharing">this google sheet</a>.
+		<br /> These games will be submitted to LeelaZ server for training a better version of LeelaZ.
+		<br /> So, just leave this tab here, you are helping to train a better version of LeelaZ!
+	</p>
+
 	<canvas id="goban" width="420" height="420">Your browser does not support the canvas tag.</canvas>
 	<div id="myProgress" style="margin-top:-10px;width:407.5px;background-color: rgb(219, 219, 219);">
 		<div id="myBar" style="height:5px; width:1%;background-color:rgb(131, 224, 131);"></div>
@@ -58,6 +73,18 @@
 		<span id="white_prisoner">0</span>
 	</p>
 
+	<p>Credit: this site used
+		<a href="https://github.com/kripken/emscripten">Emscripten</a> to compile Leela Zero to WebAssembly,
+		<br />
+		<a href="https://tenso.rs/">TensorFire</a> to run the neural network using WebGL
+		<br /> and
+		<a href="https://shuheikagawa.com/works/goban.js/">Canvas Goban</a> to draw the board.
+		<br>
+	</p>
+	<p>
+		Find this project at
+		<a href="https://github.com/NTT123/leela-zero">github.com/NTT123/leela-zero</a>.
+	</p>
 
 
 </body>
@@ -145,9 +172,22 @@
 
 		// now load the Neural network
 		fetchNetworkHash();
-		setInterval(fetchNetworkHash, 5 * 60000); // five minutes
 	};
 </script>
+
+<script src="goboard.js" type="text/javascript"></script>
+<script src="game.js"></script>
+
+<script src="jquery-3.2.1.js"></script>
+<script src="polyfill.min.js"></script>
+<script src="tensor.js"></script>
+<script src="layers.js"></script>
+<script src="util.js"></script>
+<script src="network.js"></script>
+<script src="keras_import.js"></script>
+<script src="demo-util.js"></script>
+<script src="index.js"></script>
+
 
 <script>
 	(function () {
@@ -167,16 +207,3 @@
 	script.src = "leelaz.js";
 	document.body.appendChild(script);
 </script>
-
-<script src="goboard.js" type="text/javascript"></script>
-<script src="game.js"></script>
-
-<script src="jquery-3.2.1.js"></script>
-<script src="polyfill.min.js"></script>
-<script src="tensor.js"></script>
-<script src="layers.js"></script>
-<script src="util.js"></script>
-<script src="network.js"></script>
-<script src="keras_import.js"></script>
-<script src="demo-util.js"></script>
-<script src="index.js"></script>
