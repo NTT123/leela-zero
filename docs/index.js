@@ -162,7 +162,7 @@ var forwardjs = function () {
 
 async function fetchNetworkHash() {
     console.log("Checking lastest network...");
-    let response = await fetch('/best-network-hash');
+    let response = await fetch('best-network-hash');
     let data = await response.text();
     let hash = data.split("\n")[0]
 
