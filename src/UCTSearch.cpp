@@ -360,7 +360,9 @@ void UCTSearch::mythink() {
     auto time_for_move = 10000; // m_rootstate.get_timecontrol().max_time_for_move(color);
     int last_update = 0;
     bool keeprunning = true;
+    int count = 0;
     do {
+        count = count + 1;
         auto currstate = std::make_unique<GameState>(m_rootstate);
 
         auto result = play_simulation(*currstate, &m_root);
@@ -373,6 +375,8 @@ void UCTSearch::mythink() {
         // check if we should still search
         keeprunning  = is_running();
         keeprunning &= !playout_limit_reached();
+
+        if (count > 5) break;
     } while(keeprunning);
 }
 

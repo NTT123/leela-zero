@@ -302,7 +302,7 @@ int main (int argc, char *argv[]) {
 #else
     /* set board limits */
     float komi = 7.5;
-	emscripten_set_main_loop(mainloop, 10, 0);
+	emscripten_set_main_loop(mainloop, 100, 0);
 	MAINGAME.init_game(19, komi);
 #endif
 

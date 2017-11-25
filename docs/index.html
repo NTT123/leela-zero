@@ -2,6 +2,42 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
+
+
+<script type='text/javascript'>
+
+	var timeoutId = 0;
+	var timeouts = {};
+
+	var worker = new Worker("worker.js");
+	worker.addEventListener("message", function (evt) {
+		var data = evt.data,
+			id = data.id,
+			fn = timeouts[id].fn,
+			args = timeouts[id].args;
+
+		fn.apply(null, args);
+		delete timeouts[id];
+	});
+
+	window.setTimeout = function (fn, delay) {
+		var args = Array.prototype.slice.call(arguments, 2);
+		timeoutId += 1;
+		delay = delay || 0;
+		var id = timeoutId;
+		timeouts[id] = { fn: fn, args: args };
+		worker.postMessage({ command: "setTimeout", id: id, timeout: delay });
+		return id;
+	};
+
+	window.clearTimeout = function (id) {
+		worker.postMessage({ command: "clearTimeout", id: id });
+		delete timeouts[id];
+	};
+
+</script>
+
+
 <body style="height:100%; width:100%; overflow:hidden;">
 
 	<h1>Leela Z</h1>
@@ -58,11 +94,11 @@
 			console.log(text);
 		},
 		totalDependencies: 0,
-		monitorRunDependencies: function (left) {}
+		monitorRunDependencies: function (left) { }
 	};
 
 	Module.setStatus('Downloading...');
-	window.onerror = function (event) {};
+	window.onerror = function (event) { };
 
 	var mainjs = null;
 	var set_input_buffer = null;
@@ -138,4 +174,3 @@
 <script src="keras_import.js"></script>
 <script src="demo-util.js"></script>
 <script src="index.js"></script>
-
