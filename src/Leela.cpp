@@ -262,7 +262,6 @@ int main (int argc, char *argv[]) {
     }
 
 #ifndef USE_WEBGL
-    printf("WTF\n");
     thread_pool.initialize(cfg_num_threads);
 #endif
 
@@ -317,11 +316,12 @@ int mystatus = 0; //   0 : do nothing
                   //   1 : thinking
                   //   2 : move now
 void mainloop() {
+    int id = -1;
 
     if (mystatus == 1) {
         SEARCH->mythink();
         if (SEARCH->playout_limit_reached()) {
-            SEARCH->end_think();
+            SEARCH->end_mythink();
             mystatus = 2;
         }
 
@@ -332,7 +332,7 @@ void mainloop() {
         MAINGAME.play_move(SEARCH->color, SEARCH->mymove);
 
         std::string vertex = MAINGAME.move_to_text(SEARCH->mymove);
-        gtp_printf(0, "%s", vertex.c_str());
+        gtp_printf(id, "%s\n", vertex.c_str());
         mystatus = 0;
 
         return;

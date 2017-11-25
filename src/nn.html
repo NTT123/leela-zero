@@ -1,0 +1,141 @@
+<title>Neural GO | TensorFire</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<body style="height:100%; width:100%; overflow:hidden;">
+
+	<h1>Leela Z</h1>
+	<canvas id="goban" width="420" height="420">Your browser does not support the canvas tag.</canvas>
+	<p>
+		<button type="button" id="beginning">&lt;&lt;</button>
+		<button type="button" id="previous">&lt;</button>
+		<span id="current">0</span>
+		<button type="button" id="next">&gt;</button>
+		<button type="button" id="last">&gt;&gt;</button>
+	</p>
+	<p>Black:
+		<span id="black_prisoner">0</span> White:
+		<span id="white_prisoner">0</span>
+	</p>
+
+</body>
+
+<script src="goban.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+	function init() {
+		var gocanvas = document.getElementById('goban');
+		controller = new GOBAN.Controller(new GOBAN.CanvasView(gocanvas), new GOBAN.Board());
+		GOBAN.Utils.$("previous").onclick = GOBAN.Utils.bind(controller, controller.onPrevious);
+		GOBAN.Utils.$("next").onclick = GOBAN.Utils.bind(controller, controller.onNext);
+		GOBAN.Utils.$("beginning").onclick = GOBAN.Utils.bind(controller, controller.onBeginning);
+		GOBAN.Utils.$("last").onclick = GOBAN.Utils.bind(controller, controller.onLast);
+	}
+</script>
+
+
+<script type='text/javascript'>
+	var readMove;
+
+	var Module = {
+		preRun: [],
+		postRun: [],
+		arguments: ['--gtp', '--playouts=10', '--threads=1', '--weights=hello',
+			'--noponder', '--quiet', '--noise', '--dumbpass', '--randomcnt=30', '--resignpct=0'
+		],
+		print: (function () {
+			return function (text) {
+				console.log(text);
+				readMove(text);
+			};
+		})(),
+		printErr: (function () {
+			return function (text) {
+				console.log(text);
+			};
+		})(),
+		setStatus: function (text) {
+			console.log(text);
+		},
+		totalDependencies: 0,
+		monitorRunDependencies: function (left) {}
+	};
+
+	Module.setStatus('Downloading...');
+	window.onerror = function (event) {};
+
+	var mainjs = null;
+	var set_input_buffer = null;
+
+	var filearray = new Uint8Array(19 * 19 * 18);
+	var inputarray = new Float32Array(19 * 19 * 18);
+	var outputarray = new Float32Array(19 * 19 + 1 + 1);
+	var inbuf;
+	var outbuf;
+	var filebuf;
+	var loadedLeela = false;
+	/*
+
+	Module.ccall('my_function', 'number', ['number'], [buf]);
+	Module._free(buf);
+
+	Here my_function is a C function that receives a single integer parameter (or a pointer, they are both just 32-bit integers for us) and returns an integer. This could be something like int my_function(char *buf).
+
+	*/
+
+	Module.onRuntimeInitialized = function () {
+		console.log("Done!");
+
+		// setting up the communication with Wasm Leela
+		Module.sendcmd = Module.cwrap('sendcmd', 'void', ['string']);
+		inbuf = Module._malloc(inputarray.length * inputarray.BYTES_PER_ELEMENT);
+		outbuf = Module._malloc(outputarray.length * outputarray.BYTES_PER_ELEMENT);
+		filebuf = Module._malloc(filearray.length * filearray.BYTES_PER_ELEMENT);
+
+		inputarray = Module.HEAPF32.subarray(inbuf / 4, inbuf / 4 + 19 * 19 * 18);
+		outputarray = Module.HEAPF32.subarray(outbuf / 4, outbuf / 4 + 19 * 19 + 2);
+
+		filearray = Module.HEAPU8.subarray(filebuf, filebuf + 19 * 19 * 18);
+
+		Module.ccall('set_input_buffer', 'void', ['number'], [inbuf]);
+		Module.ccall('set_output_buffer', 'void', ['number'], [outbuf]);
+		Module.ccall('set_file_buffer', 'void', ['number'], [filebuf]);
+
+		// now load the Neural network
+		fetchNetworkHash();
+		setInterval(fetchNetworkHash, 5 * 60000); // five minutes
+	};
+</script>
+
+<script>
+	(function () {
+		var memoryInitializer = 'leelaz.html.mem';
+		if (typeof Module['locateFile'] === 'function') {
+			memoryInitializer = Module['locateFile'](memoryInitializer);
+		} else if (Module['memoryInitializerPrefixURL']) {
+			memoryInitializer = Module['memoryInitializerPrefixURL'] + memoryInitializer;
+		}
+		var meminitXHR = Module['memoryInitializerRequest'] = new XMLHttpRequest();
+		meminitXHR.open('GET', memoryInitializer, true);
+		meminitXHR.responseType = 'arraybuffer';
+		meminitXHR.send(null);
+	})();
+
+	var script = document.createElement('script');
+	script.src = "leelaz.js";
+	document.body.appendChild(script);
+</script>
+
+<script src="goboard.js" type="text/javascript"></script>
+<script src="game.js"></script>
+
+<script src="jquery-3.2.1.js"></script>
+<script src="polyfill.min.js"></script>
+<script src="tensor.js"></script>
+<script src="layers.js"></script>
+<script src="util.js"></script>
+<script src="network.js"></script>
+<script src="keras_import.js"></script>
+<script src="demo-util.js"></script>
+<script src="index.js"></script>
+

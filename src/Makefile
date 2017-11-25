@@ -2,7 +2,7 @@ default:
 	$(MAKE) CC=gcc CXX=g++ \
 		CXXFLAGS='$(CXXFLAGS) -Wall -Wextra -pipe -O3 -g -ffast-math -flto -march=native -std=c++14 -DNDEBUG'  \
 		LDFLAGS='$(LDFLAGS) -flto -g' \
-		leelaz
+		leelaz -L/Users/xcode/homebrew/lib
 
 debug:
 	$(MAKE) CC=gcc CXX=g++ \
@@ -11,18 +11,24 @@ debug:
 		leelaz
 
 clang:
-	$(MAKE) CC=clang-5.0 CXX=clang++-5.0 \
+	$(MAKE) CC=clang CXX=clang++ \
 		CXXFLAGS='$(CXXFLAGS) -Wall -Wextra -Wno-missing-braces -O3 -ffast-math -flto -march=native -std=c++14 -DNDEBUG' \
 		LDFLAGS='$(LDFLAGS) -flto -fuse-linker-plugin' \
 		leelaz
 
-DYNAMIC_LIBS = -lboost_program_options -lpthread -lz
+webgl:
+	$(MAKE) CC=emcc CXX=em++ \
+		CXXFLAGS='$(CXXFLAGS) -Wall -Wextra -pipe -O3 -g -ffast-math -flto -std=c++14 -DNDEBUG'  \
+		LDFLAGS='$(LDFLAGS) -flto -g' \
+		leelazjs
+
+DYNAMIC_LIBS = -lboost_program_options -lpthread -lz -L/Users/xcode/homebrew/lib
 LIBS =
 
 # for Linux with OpenBLAS
-CXXFLAGS += -I/usr/include/openblas
-DYNAMIC_LIBS += -lopenblas
-DYNAMIC_LIBS += -lOpenCL
+# CXXFLAGS += -I/usr/include/openblas
+# DYNAMIC_LIBS += -lopenblas
+# DYNAMIC_LIBS += -lOpenCL
 
 # for macOS (comment out the Linux part)
 # LIBS += -framework Accelerate
@@ -33,6 +39,9 @@ DYNAMIC_LIBS += -lOpenCL
 #DYNAMIC_LIBS += -lmkl_rt
 #CXXFLAGS += -I/opt/intel/mkl/include
 #LDFLAGS  += -L/opt/intel/mkl/lib/intel64/
+
+# for WebGL (comment out the Linux part)
+CXXFLAGS += -I/Users/xcode/homebrew/include -I./zlib
 
 CXXFLAGS += -I.
 CPPFLAGS += -MD -MP
@@ -53,6 +62,9 @@ deps = $(sources:%.cpp=%.d)
 
 leelaz: $(objects)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS) $(DYNAMIC_LIBS)
+
+leelazjs: $(objects)
+	$(CXX) $(LDFLAGS) -o leelaz.html $^ $(LIBS) $(DYNAMIC_LIBS) program_options/src/*.o zlib/*.o -O2 -s DEMANGLE_SUPPORT=1 -s DISABLE_EXCEPTION_CATCHING=2 -s ASSERTIONS=2 -s ALLOW_MEMORY_GROWTH=0 -s EXPORTED_FUNCTIONS="['_set_input_buffer','_set_output_buffer', '_main', '_sendcmd', '_set_file_buffer']"  -s TOTAL_MEMORY=320MB #--proxy-to-worker
 
 clean:
 	-$(RM) leelaz $(objects) $(deps)

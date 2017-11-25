@@ -77,7 +77,7 @@ public:
 #ifdef USE_WEBGL
     void init_mythink(int color, passflag_t passflag = NORMAL);
     void mythink();
-    void end_think();
+    void end_mythink();
     int color;
     int mymove;
     passflag_t passflag;

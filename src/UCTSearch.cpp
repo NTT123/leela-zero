@@ -325,6 +325,7 @@ void UCTSearch::increment_playouts() {
     m_playouts++;
 }
 
+#ifdef USE_WEBGL
 void UCTSearch::init_mythink(int color_, passflag_t passflag_) {
     color = color_;
     passflag = passflag_;
@@ -356,35 +357,27 @@ void UCTSearch::init_mythink(int color_, passflag_t passflag_) {
 }
 
 void UCTSearch::mythink() {
-    Time start;
-    auto time_for_move = 1000; // m_rootstate.get_timecontrol().max_time_for_move(color);
+    auto time_for_move = 10000; // m_rootstate.get_timecontrol().max_time_for_move(color);
     int last_update = 0;
     bool keeprunning = true;
     do {
         auto currstate = std::make_unique<GameState>(m_rootstate);
 
         auto result = play_simulation(*currstate, &m_root);
+
         if (result.valid()) {
             increment_playouts();
         }
 
-        Time elapsed;
-        int centiseconds_elapsed = Time::timediff(start, elapsed);
-
         // output some stats every few seconds
         // check if we should still search
-        if (centiseconds_elapsed - last_update > 250) {
-            last_update = centiseconds_elapsed;
-            dump_analysis(static_cast<int>(m_playouts));
-        }
         keeprunning  = is_running();
-        keeprunning &= (centiseconds_elapsed < time_for_move);
         keeprunning &= !playout_limit_reached();
     } while(keeprunning);
 }
 
 
-void UCTSearch::end_think() {
+void UCTSearch::end_mythink() {
     // stop the search
     m_run = false;
     m_rootstate.stop_clock(color);
@@ -402,6 +395,8 @@ void UCTSearch::end_think() {
 
     mymove = get_best_move(passflag);
 }
+
+#endif
 
 int UCTSearch::think(int color, passflag_t passflag) {
     assert(m_playouts == 0);

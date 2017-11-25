@@ -38,6 +38,16 @@
 #include "TTable.h"
 #include "Training.h"
 
+#ifdef USE_WEBGL
+#include <emscripten.h>
+char * myFileBuf;
+extern "C" {
+    void set_file_buffer(char * buf) {
+        myFileBuf = buf;
+    }
+}
+#endif
+
 using namespace Utils;
 
 // Configuration flags
@@ -668,10 +678,17 @@ bool GTP::execute(GameState & game, std::string xinput) {
         if (cmdstream.fail()) {
             gtp_printf(id, "%s\n", sgf_text.c_str());
         } else {
+#ifdef USE_WEBGL
+            strcpy(myFileBuf, sgf_text.c_str());
+            EM_ASM(
+                sendGoogle();
+            );
+#else
             std::ofstream out(filename);
             out << sgf_text;
             out.close();
             gtp_printf(id, "");
+#endif
         }
 
         return true;
