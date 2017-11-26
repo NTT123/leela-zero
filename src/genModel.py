@@ -485,4 +485,4 @@ for _ in range(10000000000000000):
     except Exception as e:
         print(e)
 
-    time.sleep(10*6)
+    time.sleep(10*60)
