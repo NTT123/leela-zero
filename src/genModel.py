@@ -475,8 +475,10 @@ for _ in range(10000000000000000):
         f.close()
 
 
-        all(['mv', "best-network-bash", "../docs"])
-        call(['mv', myhash + ".*", "../docs"])
+        call(['mv', "best-network-bash", "../docs"])
+        call(['mv', myhash + ".buf ", "../docs"])
+        call(['mv', myhash + ".meta.json", "../docs"])
+        call(['mv', myhash + ".proto.json", "../docs"])
         call(['git', "add", "best-network-hash", myhash + ".*"])
         call(['git', "commit", "-m", myhash])
         call(['git', "push", "origin", "master"])
