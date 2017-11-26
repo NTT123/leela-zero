@@ -64,7 +64,7 @@ leelaz: $(objects)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS) $(DYNAMIC_LIBS)
 
 leelazjs: $(objects)
-	$(CXX) $(LDFLAGS) -o leelaz.html $^ $(LIBS) $(DYNAMIC_LIBS) program_options/src/*.o zlib/*.o -O3 -s DEMANGLE_SUPPORT=1 -s DISABLE_EXCEPTION_CATCHING=2 -s ASSERTIONS=2 -s ALLOW_MEMORY_GROWTH=0 -s EXPORTED_FUNCTIONS="['_set_input_buffer','_set_output_buffer', '_main', '_sendcmd', '_set_file_buffer']"  -s TOTAL_MEMORY=160MB -s WASM=1 -s "BINARYEN_METHOD='native-wasm,asmjs'"
+	$(CXX) $(LDFLAGS) -o leelaz.html $^ $(LIBS) $(DYNAMIC_LIBS) program_options/src/*.o zlib/*.o -O3 -s DEMANGLE_SUPPORT=1 -s DISABLE_EXCEPTION_CATCHING=2 -s ASSERTIONS=2 -s ALLOW_MEMORY_GROWTH=0 -s EXPORTED_FUNCTIONS="['_set_input_buffer','_set_output_buffer', '_main', '_sendcmd', '_set_file_buffer']"  -s TOTAL_MEMORY=160MB -s "BINARYEN_METHOD='native-wasm,asmjs'"
 
 clean:
 	-$(RM) leelaz $(objects) $(deps)
