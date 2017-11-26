@@ -475,13 +475,13 @@ for _ in range(10000000000000000):
         f.close()
 
 
-        system('mv'+ "best-network-bash", "../docs"])
-        system('mv '+ myhash + ".buf ", "../docs"])
-        system('mv '+ myhash + ".meta.json", "../docs"])
-        system('mv '+ myhash + ".proto.json", "../docs"])
-        system("git add ../docs/best-network-hash ../docs/" + myhash + ".*"])
-        system("git commit -m "+ myhash])
-        system("git push origin master"])
+        system('mv'+ "best-network-bash", "../docs")
+        system('mv '+ myhash + ".buf ", "../docs")
+        system('mv '+ myhash + ".meta.json", "../docs")
+        system('mv '+ myhash + ".proto.json", "../docs")
+        system("git add ../docs/best-network-hash ../docs/" + myhash + ".*")
+        system("git commit -m "+ myhash)
+        system("git push origin master")
     except Exception as e:
         print(e)
 
