@@ -87,6 +87,11 @@ var sendGoogle = function () {
 
     document.body.appendChild(ifrm);
     ifrm.onload= function() { 
+        ncount = parseInt(readCookie("NGAME"));
+
+        ncount = ncount + 1;
+        eraseCookie("NGAME");
+        createCookie("NGAME", String(ncount), 365*10);
         setTimeout(function() {  location.reload(); }, 2000);
     };
 };
