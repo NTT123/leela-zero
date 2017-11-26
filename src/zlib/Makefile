@@ -140,9 +140,6 @@ match.lo: match.S
 	mv _match.o match.lo
 	rm -f _match.s
 
-example.o: test/example.c zlib.h zconf.h
-	$(CC) $(CFLAGS) -I. -c -o $@ test/example.c
-
 minigzip.o: test/minigzip.c zlib.h zconf.h
 	$(CC) $(CFLAGS) -I. -c -o $@ test/minigzip.c
 

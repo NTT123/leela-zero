@@ -380,7 +380,7 @@ void UCTSearch::mythink() {
         keeprunning  = is_running();
         keeprunning &= !playout_limit_reached();
 
-        if (count > 10) break;
+        if (count > 1) break;
     } while(keeprunning);
     EM_ASM ({
         var elem = document.getElementById("myBar"); 

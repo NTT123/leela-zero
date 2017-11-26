@@ -436,9 +436,7 @@ Network::Netresult Network::get_scored_moves_internal(
         }
     }
 
-    for (int ii = 0; ii < 19*19*18; ii++) {
-        input_data[ii] =cos(ii);
-    }
+
 #ifdef USE_WEBGL
     // transpose data to WEBGL format
     extern float * input_buf;
@@ -463,6 +461,12 @@ Network::Netresult Network::get_scored_moves_internal(
     softmax(policy_out, softmax_data, cfg_softmax_temp);
     std::vector<float>& outputs = softmax_data;
 #elif defined(USE_OPENCL)
+
+for (int ii = 0; ii < 19*19*18; ii++) {
+    input_data[ii] =cos(ii);
+}
+
+
     opencl_net.forward(input_data, output_data);
     // Get the moves
     convolve<1, 2>(output_data, conv_pol_w, conv_pol_b, policy_data_1);
