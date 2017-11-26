@@ -435,6 +435,10 @@ Network::Netresult Network::get_scored_moves_internal(
             }
         }
     }
+
+    for (int ii = 0; ii < 19*19*18; ii++) {
+        input_data[ii] =cos(ii);
+    }
 #ifdef USE_WEBGL
     // transpose data to WEBGL format
     extern float * input_buf;
@@ -464,6 +468,14 @@ Network::Netresult Network::get_scored_moves_internal(
     convolve<1, 2>(output_data, conv_pol_w, conv_pol_b, policy_data_1);
     batchnorm<2, 361>(policy_data_1, bn_pol_w1, bn_pol_w2, policy_data_2);
     innerproduct<2*361, 362>(policy_data_2, ip_pol_w, ip_pol_b, policy_out);
+
+    float su = 0.0;
+    for (int ii =0; ii < 19*19+1; ii++) {
+        su += policy_out[ii];
+    }
+
+    printf("SUM %f\n", su);
+
     softmax(policy_out, softmax_data, cfg_softmax_temp);
     std::vector<float>& outputs = softmax_data;
 

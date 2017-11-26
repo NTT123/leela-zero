@@ -31,9 +31,9 @@ LIBS =
 # DYNAMIC_LIBS += -lOpenCL
 
 # for macOS (comment out the Linux part)
-# LIBS += -framework Accelerate
-# LIBS += -framework OpenCL
-# CXXFLAGS += -I/System/Library/Frameworks/Accelerate.framework/Versions/Current/Headers
+LIBS += -framework Accelerate
+LIBS += -framework OpenCL
+CXXFLAGS += -I/System/Library/Frameworks/Accelerate.framework/Versions/Current/Headers
 
 # for MKL instead of OpenBLAS
 #DYNAMIC_LIBS += -lmkl_rt

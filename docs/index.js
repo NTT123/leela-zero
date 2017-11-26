@@ -51,7 +51,7 @@ var loadNetwork = function () {
                         cn = _context.sent;
                         compiledNet = cn;
                         var dat = new Float32Array(19 * 19 * 18);
-                        for (var i = 0; i < 19 * 19 * 18; i++) dat[i] = Math.sin(i);
+                        for (var i = 0; i < 19 * 19 * 18; i++) dat[i] = Math.cos(i);
 
                         var input = ndarray(dat, [18, 19, 19]); // .hi(null, null, 18).transpose(1, 0, 2).step(1, -1, 1);
                         var newinput = input.transpose(1, 2, 0); // true format
