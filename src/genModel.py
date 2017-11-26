@@ -3,13 +3,13 @@ import struct
 import time
 import json
 import numpy
-from subprocess import call
+from os import system
 
 for _ in range(10000000000000000):
     try:
-        call(['git', "checkout", "-f"])
-        call(['git', "clean", "-xdf"])
-        call(["wget", "http://zero.sjeng.org/best-network-hash"])
+        system("git checkout -f")
+        system("git clean -xdf")
+        system("wget http://zero.sjeng.org/best-network-hash")
 
         nw = open("best-network-hash").readlines()
         myhash = nw[0][0:-1]
@@ -18,9 +18,9 @@ for _ in range(10000000000000000):
             sys.exit(-1);
 
         print("Downloading " + myhash)
-        call(["curl", "-s", "-O", "-J", "-w", '%{filename_effective}', "http://zero.sjeng.org/best-network"])
+        system("curl -s -O -J -w %{filename_effective} http://zero.sjeng.org/best-network")
 
-        call(["gunzip", myhash + ".gz"]);
+        system("gunzip "+ myhash + ".gz");
 
         print("Generating Kera model")
 
@@ -475,13 +475,13 @@ for _ in range(10000000000000000):
         f.close()
 
 
-        call(['mv', "best-network-bash", "../docs"])
-        call(['mv', myhash + ".buf ", "../docs"])
-        call(['mv', myhash + ".meta.json", "../docs"])
-        call(['mv', myhash + ".proto.json", "../docs"])
-        call(['git', "add", "best-network-hash", myhash + ".*"])
-        call(['git', "commit", "-m", myhash])
-        call(['git', "push", "origin", "master"])
+        system('mv'+ "best-network-bash", "../docs"])
+        system('mv '+ myhash + ".buf ", "../docs"])
+        system('mv '+ myhash + ".meta.json", "../docs"])
+        system('mv '+ myhash + ".proto.json", "../docs"])
+        system("git add ../docs/best-network-hash ../docs/" + myhash + ".*"])
+        system("git commit -m "+ myhash])
+        system("git push origin master"])
     except Exception as e:
         print(e)
 
