@@ -34,7 +34,6 @@ public:
     void init_state();
 
     KoState * get_state();
-    KoState * get_state_from_mainline(unsigned int movenum = 999);
     GameState follow_mainline_state(unsigned int movenum = 999);
     std::vector<int> get_mainline();
     void load_from_file(std::string filename, int index = 0);
@@ -48,7 +47,7 @@ public:
     int get_move(int tomove);
     bool is_initialized() const {
         return m_initialized;
-    };
+    }
     FastBoard::square_t get_winner();
 
     static std::string state_to_string(GameState& state, int compcolor);

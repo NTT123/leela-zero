@@ -109,8 +109,9 @@
 	var Module = {
 		preRun: [],
 		postRun: [],
-		arguments: ['--gtp', '--playouts=1000', '--threads=1', '--weights=hello',
-			'--noponder', '--quiet', '--noise', '--dumbpass', '--randomcnt=30', '--resignpct=0'
+        // -g -t 1 -q -d -n -m 30 -w 
+		arguments: ['--gtp', '--playouts=1600', '--threads=1', '--weights=hello',
+			'--noponder', '--quiet', '--noise', '--dumbpass', '--randomcnt=30', '--resignpct=1'
 		],
 		print: (function () {
 			return function (text) {
