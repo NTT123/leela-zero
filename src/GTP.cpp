@@ -26,6 +26,8 @@
 #include <cmath>
 #include <climits>
 #include <algorithm>
+#include <random>
+#include <chrono>
 
 #include "config.h"
 #include "Utils.h"
@@ -58,13 +60,12 @@ int cfg_lagbuffer_cs;
 int cfg_resignpct;
 int cfg_noise;
 int cfg_random_cnt;
+uint64 cfg_rng_seed;
 bool cfg_dumbpass;
 #ifdef USE_OPENCL
 std::vector<int> cfg_gpus;
 int cfg_rowtiles;
 #endif
-float cfg_cutoff_offset;
-float cfg_cutoff_ratio;
 float cfg_puct;
 float cfg_softmax_temp;
 std::string cfg_weightsfile;
@@ -81,16 +82,25 @@ void GTP::setup_default_parameters() {
     cfg_gpus = { };
     cfg_rowtiles = 5;
 #endif
-    cfg_puct = 2.8f;
+    cfg_puct = 0.85f;
     cfg_softmax_temp = 1.0f;
-    cfg_cutoff_offset = 25.0f;
-    cfg_cutoff_ratio = 5.0f;
     cfg_resignpct = 10;
     cfg_noise = false;
     cfg_random_cnt = 0;
     cfg_dumbpass = false;
     cfg_logfile_handle = nullptr;
     cfg_quiet = false;
+
+    // C++11 doesn't guarantee *anything* about how random this is,
+    // and in MinGW it isn't random at all. But we can mix it in, which
+    // helps when it *is* high quality (Linux, MSVC).
+    std::random_device rd;
+    std::ranlux48 gen(rd());
+    uint64 seed1 = (gen() << 16) ^ gen();
+    // If the above fails, this is one of our best, portable, bets.
+    uint64 seed2 = std::chrono::high_resolution_clock::
+        now().time_since_epoch().count();
+    cfg_rng_seed = seed1 ^ seed2;
 }
 
 const std::string GTP::s_commands[] = {
@@ -196,7 +206,6 @@ bool GTP::execute(GameState & game, std::string xinput) {
         return true;
     } else if (input == "exit") {
         exit(EXIT_SUCCESS);
-        return true;
     } else if (input == "#") {
         return true;
     } else if (std::isdigit(input[0])) {
@@ -662,7 +671,18 @@ bool GTP::execute(GameState & game, std::string xinput) {
         }
         return true;
     } else if (command.find("netbench") == 0) {
-        Network::benchmark(&game);
+        std::istringstream cmdstream(command);
+        std::string tmp;
+        int iterations;
+
+        cmdstream >> tmp;  // eat netbench
+        cmdstream >> iterations;
+
+        if (!cmdstream.fail()) {
+            Network::benchmark(&game, iterations);
+        } else {
+            Network::benchmark(&game);
+        }
         gtp_printf(id, "");
         return true;
 
@@ -710,6 +730,8 @@ bool GTP::execute(GameState & game, std::string xinput) {
         }
 
         Training::dump_training(who_won, filename);
+        filename += ".debug";
+        Training::dump_stats(filename);
 
         if (!cmdstream.fail()) {
             gtp_printf(id, "");
