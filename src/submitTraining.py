@@ -84,7 +84,7 @@ for _ in range(10000000000000000000000):
     ff.write(h)
     ff.close()
     system("git add lastHash.txt")
-    system("git commit -m "update lastHash"
+    system("git commit -m \"update lastHash\"")
     system("git push origin submitServer")
 
     time.sleep(1*60) # 1 minutes
