@@ -24,9 +24,9 @@ clang:
 DYNAMIC_LIBS = -lboost_program_options -lpthread -lz -lrt
 
 # for Linux with OpenBLAS
-# CXXFLAGS += -I/usr/include/openblas
-# DYNAMIC_LIBS += -lopenblas
-# DYNAMIC_LIBS += -lOpenCL
+CXXFLAGS += -I/usr/include/openblas
+DYNAMIC_LIBS += -lopenblas
+DYNAMIC_LIBS += -lOpenCL
 
 # for macOS (comment out the Linux part)
 
