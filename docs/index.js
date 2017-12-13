@@ -170,6 +170,7 @@ async function fetchNetworkHash() {
         // initializing the board
         init();
         bestNetworkHash = hash;
+        document.getElementById("hash").innerText = hash;
         console.log("Loading best network " + bestNetworkHash);
         await loadNetwork(bestNetworkHash).catch(err => {
             console.log('Error: ', err)
@@ -237,3 +238,4 @@ var ncount = parseInt(count);
 
 console.log("Number of played games:", ncount);
 document.getElementById("numgame").innerText = String(ncount);
+
