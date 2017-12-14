@@ -9,7 +9,8 @@ for _ in range(10000000000000000000000):
 
     system('curl "http://zero.sjeng.org/" -o network.txt')
     net = open("network.txt", "r").read()
-    hashes = [l.split(">")[1][0:64] for l in net.split("<tr><td>")[1:]]
+    hashes = [l[0:64] for l in net.split("/networks/")[1:] if l[64:67] == ".gz"]
+    print(hashes)
 
     txt = f.read()
 
