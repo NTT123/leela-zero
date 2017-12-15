@@ -22,7 +22,7 @@ clang:
 		leelaz
 
 cuda: Cuda.cpp
-	GPU=1 $(MAKE) -e -C ./darknet
+	GPU=1 $(MAKE) -e -C ./darknet libdarknet.so
 	g++ Cuda.cpp -L./darknet -ldarknet -o cudatest --std=c++14
 	ln -sf ./darknet/libdarknet.so ./libdarknet.so
 
@@ -72,5 +72,6 @@ leelaz: $(objects)
 
 clean:
 	-$(RM) leelaz $(objects) $(deps)
+	GPU=1 $(MAKE) -e -C ./darknet clean
 
 .PHONY: clean default debug clang cuda
