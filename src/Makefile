@@ -26,6 +26,11 @@ cuda: Cuda.cpp
 	g++ Cuda.cpp -L./darknet -ldarknet -o cudatest --std=c++14
 	ln -sf ./darknet/libdarknet.so ./libdarknet.so
 
+cudnn: Cuda.cpp
+	CUDNN=1 GPU=1 $(MAKE) -e -C ./darknet libdarknet.so
+	g++ Cuda.cpp -L./darknet -ldarknet -o cudatest --std=c++14
+	ln -sf ./darknet/libdarknet.so ./libdarknet.so
+
 DYNAMIC_LIBS = -lboost_program_options -lpthread -lz
 LIBS =
 
@@ -72,6 +77,6 @@ leelaz: $(objects)
 
 clean:
 	-$(RM) leelaz $(objects) $(deps)
-	GPU=1 $(MAKE) -e -C ./darknet clean
+	$(MAKE) -e -C ./darknet clean
 
 .PHONY: clean default debug clang cuda
