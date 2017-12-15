@@ -21,6 +21,11 @@ clang:
 		LDFLAGS='$(LDFLAGS) -flto -fuse-linker-plugin' \
 		leelaz
 
+cuda: Cuda.cpp
+	GPU=1 $(MAKE) -e -C ./darknet
+	g++ Cuda.cpp -L./darknet -ldarknet -o cudatest --std=c++14
+	ln -sf ./darknet/libdarknet.so ./libdarknet.so
+
 DYNAMIC_LIBS = -lboost_program_options -lpthread -lz
 LIBS =
 
@@ -54,6 +59,9 @@ sources = Network.cpp FullBoard.cpp KoState.cpp Training.cpp \
 objects = $(sources:.cpp=.o)
 deps = $(sources:%.cpp=%.d)
 
+
+
+
 -include $(deps)
 
 %.o: %.cpp
@@ -65,4 +73,4 @@ leelaz: $(objects)
 clean:
 	-$(RM) leelaz $(objects) $(deps)
 
-.PHONY: clean default debug clang
+.PHONY: clean default debug clang cuda
