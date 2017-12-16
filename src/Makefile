@@ -22,14 +22,23 @@ clang:
 		leelaz
 
 cuda: Cuda.cpp
-	GPU=1 $(MAKE) -e -C ./darknet libdarknet.so
-	g++ Cuda.cpp -L./darknet -ldarknet -o cudatest --std=c++14
+	GPU=1 $(MAKE) -e -C ./darknet obj libdarknet.so
 	ln -sf ./darknet/libdarknet.so ./libdarknet.so
+	@echo "Detected OS: ${THE_OS}"
+	$(MAKE) CC=gcc CXX=g++ \
+		CXXFLAGS='$(CXXFLAGS) -Wall -Wextra -pipe -O3 -g -ffast-math -flto -march=native -std=c++14 -DNDEBUG'  \
+		LDFLAGS='$(LDFLAGS) -flto -g -ldarknet -L.' \
+		leelaz
 
 cudnn: Cuda.cpp
-	CUDNN=1 GPU=1 $(MAKE) -e -C ./darknet libdarknet.so
-	g++ Cuda.cpp -L./darknet -ldarknet -o cudatest --std=c++14
+	CUDNN=1 GPU=1 $(MAKE) -e -C ./darknet obj libdarknet.so
 	ln -sf ./darknet/libdarknet.so ./libdarknet.so
+	@echo "Detected OS: ${THE_OS}"
+	$(MAKE) CC=gcc CXX=g++ \
+		CXXFLAGS='$(CXXFLAGS) -Wall -Wextra -pipe -O3 -g -ffast-math -flto -march=native -std=c++14 -DNDEBUG'  \
+		LDFLAGS='$(LDFLAGS) -flto -g -ldarknet -L.' \
+		leelaz
+
 
 DYNAMIC_LIBS = -lboost_program_options -lpthread -lz
 LIBS =
@@ -59,7 +68,7 @@ sources = Network.cpp FullBoard.cpp KoState.cpp Training.cpp \
 	  TimeControl.cpp UCTSearch.cpp GameState.cpp Leela.cpp \
 	  SGFParser.cpp Timing.cpp Utils.cpp FastBoard.cpp \
 	  SGFTree.cpp Zobrist.cpp FastState.cpp GTP.cpp Random.cpp \
-	  SMP.cpp UCTNode.cpp OpenCL.cpp TTable.cpp
+	  SMP.cpp UCTNode.cpp OpenCL.cpp Cuda.cpp TTable.cpp
 
 objects = $(sources:.cpp=.o)
 deps = $(sources:%.cpp=%.d)

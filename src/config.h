@@ -32,15 +32,16 @@
 #endif
 
 /* Features */
-#define USE_BLAS
+//#define USE_BLAS
 #if !defined(__APPLE__) && !defined(__MACOSX)
 #define USE_OPENBLAS
 #endif
 //#define USE_MKL
-#define USE_OPENCL
+//#define USE_OPENCL
 // Use 16-bit floating point storage for net calculations
 // #define USE_HALF
 //#define USE_TUNER
+#define USE_CUDA
 
 #define PROGRAM_NAME "Leela Zero"
 #define PROGRAM_VERSION "0.9"

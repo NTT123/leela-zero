@@ -45,6 +45,9 @@
 #include "OpenCL.h"
 #include "UCTNode.h"
 #endif
+#ifdef USE_CUDA
+#include "Cuda.h"
+#endif
 
 #include "SGFTree.h"
 #include "SGFParser.h"
@@ -108,6 +111,10 @@ void Network::benchmark(GameState * state, int iterations) {
 }
 
 void Network::initialize(void) {
+#ifdef USE_CUDA
+    myprintf("Initializing Cuda\n");
+    cuda_net.initialize();
+#endif
 #ifdef USE_OPENCL
     myprintf("Initializing OpenCL\n");
     opencl.initialize();
@@ -481,6 +488,14 @@ Network::Netresult Network::get_scored_moves_internal(
 #elif defined(USE_BLAS) && !defined(USE_OPENCL)
     forward(input_data, output_data);
 #endif
+
+#ifdef USE_CUDA
+    float * cuda_output = network_predict(cuda_net.darknet, input_data.data());
+    float winrate_sig = (1.0f + cuda_output[19*19+1]) / 2.0f;
+    policy_out.assign(cuda_output, cuda_output + 19*19 + 1);
+    softmax(policy_out, softmax_data, cfg_softmax_temp);
+    std::vector<float>& outputs = softmax_data;
+#else
     // We calculate both network heads on the CPU. They are irregular
     // and have a much lower compute densitity than the residual layers,
     // which means they don't get much - if any - speedup from being on the
@@ -501,6 +516,7 @@ Network::Netresult Network::get_scored_moves_internal(
 
     // Sigmoid
     float winrate_sig = (1.0f + std::tanh(winrate_out[0])) / 2.0f;
+#endif
 
     std::vector<scored_node> result;
     for (size_t idx = 0; idx < outputs.size(); idx++) {
