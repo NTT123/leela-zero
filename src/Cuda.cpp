@@ -62,45 +62,31 @@ private:
 };
 
 
+std::string generate_conv(int kernel_size, int input_size, int output_size) {
+
+
+}
+
 void Cuda_Network::initialize() {
     std::string cfg = std::string();
-    cfg.append(R"(
-[net]
-batch=1
-subdivisions=1
-height=19
-width=19
-channels=18
-momentum=0.9
-decay=0.0005
+    cfg.append("[net]\nbatch=1\nsubdivisions=1\nheight=19\nwidth=19\nchannels=18\nmomentum=0.9\ndecay=0.0005\n\n");
 
-[convolutional]
-filters=18
-size=3
-stride=1
-pad=1
-activation=relu
-batch_normalize=1
-
-[convolutional]
-filters=64
-size=3
-stride=1
-pad=1
-activation=relu
-batch_normalize=1
-
-[softmax]
-)");
+    char buff[300];
 
 
-    char * cfg_file_name = std::tmpnam(nullptr);
+    char * file_name = std::tmpnam(nullptr);
 
-    std::ofstream out(cfg_file_name);
-    out << cfg;
-    out.close();
+    // sprintf(buff, "[convolutional]\nfilter=%d\nsize=%d\nstride=1\n"
+    //               "pad=%d\nactivation=relu\nbatch_normalized=1\n\n", 
+    //               num_channels, 3, 1);
+    // cfg.append(buff);
+    // std::ofstream out(cfg_file_name);
+    // out << cfg;
+    // out.close();
 
-    darknet = parse_network_cfg(cfg_file_name);
+    // darknet = parse_network_cfg(cfg_file_name);
+    darknet = parse_network_cfg("darknet.cfg");
+
 
     // Count size of the network
     printf("Detecting residual layers...");
@@ -112,6 +98,8 @@ batch_normalize=1
     std::string line;
     auto linecount = size_t{0};
     auto format_version = -1;
+    int num_channels = -1;
+
     while (std::getline(wtfile, line)) {
         std::stringstream iss(line);
         // First line is the file format version id
@@ -126,6 +114,7 @@ batch_normalize=1
             auto count = std::distance(std::istream_iterator<std::string>(iss),
                                        std::istream_iterator<std::string>());
             printf("%d channels...", count);
+            num_channels = count;
         }
         linecount++;
     }
@@ -197,37 +186,82 @@ batch_normalize=1
         linecount++;
     }
     wtfile.close();
-#ifdef USE_OPENCL
-    // input
-    size_t weight_index = 0;
-    opencl_net.push_convolve(3, conv_weights[weight_index],
-                                conv_biases[weight_index]);
-    opencl_net.push_batchnorm(361, batchnorm_means[weight_index],
-                                   batchnorm_variances[weight_index]);
-    weight_index++;
 
-    // residual blocks
-    for (auto i = size_t{0}; i < residual_blocks; i++) {
-        opencl_net.push_residual(3, conv_weights[weight_index],
-                                    conv_biases[weight_index],
-                                    batchnorm_means[weight_index],
-                                    batchnorm_variances[weight_index],
-                                    conv_weights[weight_index + 1],
-                                    conv_biases[weight_index + 1],
-                                    batchnorm_means[weight_index + 1],
-                                    batchnorm_variances[weight_index + 1]);
-        weight_index += 2;
+
+    FILE *fp = fopen(file_name, "wb");
+
+    int major = 0;
+    int minor = 2;
+    int revision = 0;
+    fwrite(&major, sizeof(int), 1, fp);
+    fwrite(&minor, sizeof(int), 1, fp);
+    fwrite(&revision, sizeof(int), 1, fp);
+    fwrite(darknet->seen, sizeof(size_t), 1, fp);
+
+    std::vector<float> scale(1000, 1.0f);
+
+    for (auto i = 0; i< conv_biases.size(); i++) {
+        printf("%d - %d - %d - %d\n", conv_biases[i].size(), batchnorm_means[i].size(), batchnorm_variances[i].size(), conv_weights[i].size());
+        fwrite(conv_biases[i].data(), sizeof(float), conv_biases[i].size(), fp);
+        fwrite(scale.data(), sizeof(float),          conv_biases[i].size(), fp);
+        fwrite(batchnorm_means[i].data(), sizeof(float),     batchnorm_means[i].size(), fp);
+        fwrite(batchnorm_variances[i].data(), sizeof(float), batchnorm_variances[i].size(), fp);
+        fwrite(conv_weights[i].data(), sizeof(float),        conv_weights[i].size(), fp);
     }
+
+    // policy head
+    printf("conv pol b %f\n", conv_pol_b[0]);
+    printf("conv pol b %f\n", conv_pol_b[1]);
+    fwrite(conv_pol_b.data(), sizeof(float), conv_pol_b.size(), fp);
+    fwrite(scale.data(),      sizeof(float), conv_pol_b.size(), fp);
+    fwrite(bn_pol_w1.data(), sizeof(float), bn_pol_w1.size(), fp);
+    fwrite(bn_pol_w2.data(), sizeof(float), bn_pol_w2.size(), fp);
+    fwrite(conv_pol_w.data(), sizeof(float), conv_pol_w.size(), fp);
+    printf("%d - %d - %d - %d\n", conv_pol_b.size(), bn_pol_w1.size(), bn_pol_w2.size(), conv_pol_w.size());
+
+    fwrite(ip_pol_b.data(), sizeof(float), ip_pol_b.size(), fp);
+    fwrite(ip_pol_w.data(), sizeof(float), ip_pol_w.size(), fp);
+    printf("%d - %d\n", ip_pol_b.size(), ip_pol_w.size());
+
+    // value head
+    fwrite(conv_val_b.data(), sizeof(float), conv_val_b.size(), fp);
+    fwrite(scale.data(), sizeof(float), conv_val_b.size(), fp);
+    fwrite(bn_val_w1.data(), sizeof(float), bn_val_w1.size(), fp);
+    fwrite(bn_val_w2.data(), sizeof(float), bn_val_w2.size(), fp);
+    fwrite(conv_val_w.data(), sizeof(float), conv_val_w.size(), fp);
+
+    fwrite(ip1_val_b.data(), sizeof(float), ip1_val_b.size(), fp);
+    fwrite(ip1_val_w.data(), sizeof(float), ip1_val_w.size(), fp);
+
+    fwrite(ip2_val_b.data(), sizeof(float), ip2_val_b.size(), fp);
+    fwrite(ip2_val_w.data(), sizeof(float), ip2_val_w.size(), fp);
+
+    printf("%f\n", ip2_val_b[0]);
+
+    fclose(fp);
+
+    load_weights(darknet, file_name);
+    std::vector<float> myinp(19*19*18);
+    for (int i =0; i < 19*19*18; i++) { myinp[i] = cos(i); }
+    float *out = network_predict(darknet, myinp.data());
+    float s = 0.0;
+    for (int i = 0; i < 19*19+1; i++) {
+        printf("%f  ", out[i]);
+        s += out[i];
+    }
+    printf("winrate: %f\n", 1.0 + out[19*19+1]/2.0);
+    printf("sum_out: %f\n", s);
+    printf("last: %f\n", out[19*19-1]);
+    printf("first: %f\n", out[0]);
+
     printf("done\n");
-#endif
 }
 
 int main() {
-    cfg_weightsfile = std::string("251b7ca85b3fae0e19e55e9f79abdc5ec3d6832ad2819131581127a0c0c6b4b0");
+    cfg_weightsfile = std::string("4e4d09bee37ab25f68ba8fdf44312f93eb2d317d88ec6b93250505d5d67fd7f6");
     Cuda_Network net;
 
     net.initialize();
-
     return 0;
 }
 
