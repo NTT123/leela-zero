@@ -27,7 +27,7 @@ cuda: Cuda.cpp
 	@echo "Detected OS: ${THE_OS}"
 	$(MAKE) CC=gcc CXX=g++ \
 		CXXFLAGS='$(CXXFLAGS) -Wall -Wextra -pipe -O3 -g -ffast-math -flto -march=native -std=c++14 -DNDEBUG'  \
-		LDFLAGS='$(LDFLAGS) -flto -g -ldarknet -L.' \
+		LDFLAGS='$(LDFLAGS) -flto -g' \
 		leelaz
 
 cudnn: Cuda.cpp
@@ -36,11 +36,11 @@ cudnn: Cuda.cpp
 	@echo "Detected OS: ${THE_OS}"
 	$(MAKE) CC=gcc CXX=g++ \
 		CXXFLAGS='$(CXXFLAGS) -Wall -Wextra -pipe -O3 -g -ffast-math -flto -march=native -std=c++14 -DNDEBUG'  \
-		LDFLAGS='$(LDFLAGS) -flto -g -ldarknet -L.' \
+		LDFLAGS='$(LDFLAGS) -flto -g' \
 		leelaz
 
 
-DYNAMIC_LIBS = -lboost_program_options -lpthread -lz
+DYNAMIC_LIBS = -lboost_program_options -lpthread -lz -ldarknet -L.
 LIBS =
 
 ifeq ($(THE_OS),Linux)
