@@ -18,7 +18,7 @@ for _ in range(10000000000000000):
             sys.exit(-1);
 
         print("Downloading " + myhash)
-        system("curl -s -O -J -w %{filename_effective} http://zero.sjeng.org/best-network")
+        system("curl -o %s.gz http://zero.sjeng.org/networks/%s.gz" % (myhash, myhash) )
 
         system("gunzip "+ myhash + ".gz");
 
