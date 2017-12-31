@@ -1,7 +1,8 @@
-import time
+import gc
 import mmap
 import os
 import sys
+import time
 
 import posix_ipc as ipc
 import numpy as np
@@ -93,6 +94,20 @@ def runNN(net, realbs, input_data, memout, smpA):
     # print("delta run_nn = ", t2- t1)
 
 
+def checkNewNN():
+    nn.netlock.acquire(True)   # BLOCK HERE
+    if nn.newNetWeight != None:
+        nn.net = None
+        gc.collect()  # hope that GPU memory is freed, not sure :-()
+        weights, numBlocks, numFilters = nn.newNetWeight
+        print(" %d channels and %d blocks" % (numFilters, numBlocks) )
+        nn.net = nn.LZN(weights, numBlocks, numFilters)
+        print("...updated weight!")
+        nn.newNetWeight = None
+    nn.netlock.release()
+    return nn.net
+
+
 def main():
     leename = os.environ.get("LEELAZ", "lee")
     print("Using batch name: ", leename)
@@ -118,10 +133,6 @@ def main():
 
     print("Waiting for %d autogtp instances to run" % num_instances)
 
-    net = nn.net
-    import gc
-    import time
-
     #t2 = time.perf_counter()
     numiter = num_instances // realbs
     while True:
@@ -143,17 +154,7 @@ def main():
             dt = np.frombuffer(input_mem[start_input:end_input],
                                dtype=np.float32)
 
-            nn.netlock.acquire(True)   # BLOCK HERE
-            if nn.newNetWeight != None:
-                nn.net = None
-                gc.collect()  # hope that GPU memory is freed, not sure :-()
-                weights, numBlocks, numFilters = nn.newNetWeight
-                print(" %d channels and %d blocks" % (numFilters, numBlocks) )
-                nn.net = nn.LZN(weights, numBlocks, numFilters)
-                net = nn.net
-                print("...updated weight!")
-                nn.newNetWeight = None
-            nn.netlock.release()
+            net = checkNewNN()
 
             runNN(net, realbs, dt, output_mem[start_output:end_output], smpA)
 
