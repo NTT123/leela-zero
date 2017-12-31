@@ -107,23 +107,27 @@ def main():
     import gc
     import time
 
-    # t2 = time.perf_counter()
+    #t2 = time.perf_counter()
     numiter = num_instances // realbs
-
     while True:
         for ii in range(numiter):
-            start = ii * realbs
+            start_instance = ii * realbs
+            end_instance   = start_instance + realbs
             # print(c)
 
             # wait for data
             for i in range(realbs):
-                smpB[start + i].acquire()
+                smpB[start_instance + i].acquire()
 
-            # t1 = time.perf_counter()
-            # print("delta t1 = ", t1 - t2)
-            # t1 = time.perf_counter()
+            #t1 = time.perf_counter()
+            #print("delta t1 = ", t1 - t2)
+            #t1 = time.perf_counter()
 
-            dt = np.frombuffer(inp[(start+ 0)*input_size: (start+ realbs)*input_size], dtype=np.float32, count=input_size*realbs // 4)
+            start_input = start_instance * INSTANCE_INPUT_SIZE
+            end_input   = end_instance  * INSTANCE_INPUT_SIZE
+            dt = np.frombuffer(input_mem[start_input:end_input],
+                               dtype=np.float32,
+                               count=INSTANCE_INPUTS)
 
             nn.netlock.acquire(True)   # BLOCK HERE
             if nn.newNetWeight != None:
@@ -142,14 +146,17 @@ def main():
 
             qqq = net[1]().astype(np.float32)
             ttt = qqq.reshape(realbs * (19*19+2))
-            #print(len(ttt)*4, len(memout))
-            memout[(start+0)*output_size:(start+realbs)*output_size] = ttt.view(dtype=np.uint8)
+
+            start_output = start_instance * INSTANCE_OUTPUT_SIZE
+            end_output = end_instance * INSTANCE_OUTPUT_SIZE
+            output_mem[start_output:end_output] = ttt.view(dtype=np.uint8)
 
             for i in range(realbs):
-                smpA[start+i].release() # send result to client
-            # t2 = time.perf_counter()
-            # print("delta t2 = ", t2- t1)
-            # t2 = time.perf_counter()
+                smpA[start_instance + i].release() # send result to client
+
+            #t2 = time.perf_counter()
+            #print("delta t2 = ", t2- t1)
+            #t2 = time.perf_counter()
 
 if __name__ == "__main__":
     if len(sys.argv) != 3 :
