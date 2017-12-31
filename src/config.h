@@ -32,14 +32,14 @@
 #endif
 
 /* Features */
-#define USE_BLAS
-#define USE_OPENBLAS
+//#define USE_BLAS
+//#define USE_OPENBLAS
 //#define USE_MKL
-#define USE_OPENCL
+//#define USE_OPENCL
 //#define USE_TUNER
 #define USE_IPC
 // Remember to turn on USE_BLAS, USE_OPENBLAS (for Linux only) and USE_OPENCL when using USE_IPC_TEST
-#define USE_IPC_TEST
+//#define USE_IPC_TEST
 
 #ifdef USE_IPC_TEST
     #if !defined(USE_OPENCL) || !defined(USE_BLAS)
