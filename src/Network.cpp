@@ -66,6 +66,7 @@
 
 using namespace Utils;
 
+#ifdef USE_OPENCL
 // Input + residual block tower
 static std::vector<std::vector<float>> conv_weights;
 static std::vector<std::vector<float>> conv_biases;
@@ -92,6 +93,7 @@ static std::array<float, 256> ip1_val_b;
 
 static std::array<float, 256> ip2_val_w;
 static std::array<float, 1> ip2_val_b;
+#endif
 
 using namespace boost::interprocess;
 int batch_size;
@@ -477,11 +479,8 @@ Network::Netresult Network::get_scored_moves_internal(
     assert(INPUT_CHANNELS == planes.size());
     constexpr int width = 19;
     constexpr int height = 19;
-#ifdef USE_IPC_TEST
+#ifdef USE_OPENCL
     const auto convolve_channels = conv_pol_w.size() / conv_pol_b.size();
-#else
-    const auto convolve_channels = 128; // conv_pol_w.size() / conv_pol_b.size();
-#endif
     std::vector<net_t> input_data;
     std::vector<net_t> output_data(convolve_channels * width * height);
     std::vector<float> policy_data_1(2 * width * height);
@@ -492,7 +491,6 @@ Network::Netresult Network::get_scored_moves_internal(
     std::vector<float> softmax_data((width * height) + 1);
     std::vector<float> winrate_data(256);
     std::vector<float> winrate_out(1);
-#if !defined(USE_IPC) || defined(USE_IPC_TEST)
     // Data layout is input_data[(c * height + h) * width + w]
     input_data.reserve(INPUT_CHANNELS * width * height);
     for (int c = 0; c < INPUT_CHANNELS; ++c) {
@@ -504,14 +502,14 @@ Network::Netresult Network::get_scored_moves_internal(
         }
     }
 #endif
+
+    std::vector<float>* outputs;
+    float winrate_sig;
 #ifdef USE_IPC
-
-    char name[100];
-
-
     char* pname = getenv ("LEELAZ");
     if (pname == NULL) pname = "lee";
 
+    char name[100];
     sprintf(name, "/%s_A_%d", pname, myid);
     named_semaphore sem_A{open_only, name};
 
@@ -532,51 +530,23 @@ Network::Netresult Network::get_scored_moves_internal(
     sem_A.wait();
     float * myout = reinterpret_cast<float *>(output_mem);
 
-    std::vector<float> my_policy_out(myout, myout + 19*19+1);
+    std::vector<float> ipc_policy_out(myout, myout + 19*19+1);
 
     if (cfg_softmax_temp != 1.0f) printf("ERROR: wrong temperature");
 
-    std::vector<float>& outputs = my_policy_out;
-    float winrate_sig = (1.0f + myout[19*19+1]) / 2.0f;
-    // printf("My threadID %d with socket id %d\n", idx, thread_pool.udpconnections[idx]++);
-        
-    // Uncomment bellow for testing purpose, comparing with the OpenCL results
-    // BEGIN TESTING HERE
-#ifdef USE_IPC_TEST
-    opencl_net.forward(input_data, output_data);
-    // Get the moves
-    convolve<1, 2>(output_data, conv_pol_w, conv_pol_b, policy_data_1);
-    batchnorm<2, 361>(policy_data_1, bn_pol_w1, bn_pol_w2, policy_data_2);
-    innerproduct<2*361, 362>(policy_data_2, ip_pol_w, ip_pol_b, policy_out);
-
-    for (int i = 0; i < 19*19 + 1; i++) {
-        if (fabs(policy_out[i] - my_policy_out[i]) > 1e-5) {
-            printf("ERRORRRRR %f \n", fabs(policy_out[i] - my_policy_out[i]));
-        }
-    }
-
-    // Now get the score
-    convolve<1, 1>(output_data, conv_val_w, conv_val_b, value_data_1);
-    batchnorm<1, 361>(value_data_1, bn_val_w1, bn_val_w2, value_data_2);
-    innerproduct<361, 256>(value_data_2, ip1_val_w, ip1_val_b, winrate_data);
-    innerproduct<256, 1>(winrate_data, ip2_val_w, ip2_val_b, winrate_out);
-
-    // Sigmoid
-    float mywinrate_sig = (1.0f + std::tanh(winrate_out[0])) / 2.0f;
-
-    if (fabs(mywinrate_sig - winrate_sig) > 1e-5) {
-        printf("ERR delta winrate %f\n", fabs(mywinrate_sig - winrate_sig));
-    }
+    float ipc_winrate_sig = (1.0f + myout[19*19+1]) / 2.0f;
+    outputs = &ipc_policy_out;
+    winrate_sig = ipc_winrate_sig;
 #endif
-    // END TESTING HERE
-#elif defined(USE_OPENCL)
+
+#ifdef USE_OPENCL
     opencl_net.forward(input_data, output_data);
     // Get the moves
     convolve<1, 2>(output_data, conv_pol_w, conv_pol_b, policy_data_1);
     batchnorm<2, 361>(policy_data_1, bn_pol_w1, bn_pol_w2, policy_data_2);
     innerproduct<2*361, 362>(policy_data_2, ip_pol_w, ip_pol_b, policy_out);
     softmax(policy_out, softmax_data, cfg_softmax_temp);
-    std::vector<float>& outputs = softmax_data;
+    outputs = &softmax_data;
 
     // Now get the score
     convolve<1, 1>(output_data, conv_val_w, conv_val_b, value_data_1);
@@ -585,19 +555,25 @@ Network::Netresult Network::get_scored_moves_internal(
     innerproduct<256, 1>(winrate_data, ip2_val_w, ip2_val_b, winrate_out);
 
     // Sigmoid
-    float winrate_sig = (1.0f + std::tanh(winrate_out[0])) / 2.0f;
-#elif defined(USE_BLAS) && !defined(USE_OPENCL)
-#error "Not implemented"
-    // Not implemented yet - not very useful unless you have some
-    // sort of Xeon Phi
-    softmax(output_data, softmax_data, cfg_softmax_temp);
-    // Move scores
-    std::vector<float>& outputs = softmax_data;
+    winrate_sig = (1.0f + std::tanh(winrate_out[0])) / 2.0f;
+
+#ifdef USE_IPC_TEST
+    for (int i = 0; i < 19*19 + 1; i++) {
+        if (fabs(ipc_policy_out[i] - softmax_data[i]) > 1e-5) {
+            printf("ERRORRRRR %f \n", fabs(ipc_policy_out[i] - softmax_data[i]));
+        }
+    }
+
+    if (fabs(ipc_winrate_sig - winrate_sig) > 1e-5) {
+        printf("ERR delta winrate %f\n", fabs(ipc_winrate_sig - winrate_sig));
+    }
 #endif
+#endif
+
     std::vector<scored_node> result;
-    for (size_t idx = 0; idx < outputs.size(); idx++) {
+    for (size_t idx = 0; idx < outputs->size(); idx++) {
         if (idx < 19*19) {
-            auto val = outputs[idx];
+            auto val = (*outputs)[idx];
             auto rot_idx = rotate_nn_idx(idx, rotation);
             int x = rot_idx % 19;
             int y = rot_idx / 19;
@@ -606,7 +582,7 @@ Network::Netresult Network::get_scored_moves_internal(
                 result.emplace_back(val, rot_vtx);
             }
         } else {
-            result.emplace_back(outputs[idx], FastBoard::PASS);
+            result.emplace_back((*outputs)[idx], FastBoard::PASS);
         }
     }
 
