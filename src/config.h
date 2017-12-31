@@ -41,6 +41,15 @@
 // Remember to turn on USE_BLAS, USE_OPENBLAS (for Linux only) and USE_OPENCL when using USE_IPC_TEST
 #define USE_IPC_TEST
 
+#ifdef USE_IPC_TEST
+    #if !defined(USE_OPENCL) || !defined(USE_BLAS)
+        #error Must Define USE_OPENCL and USE_BLAS with USE_IPC_TEST
+    #elif defined(__linux__) && !defined(USE_OPENBLAS)
+        #error Must enable USE_OPENBLAS on linux systems
+    #endif
+#endif
+
+
 #define PROGRAM_NAME "Leela Zero"
 #define PROGRAM_VERSION "0.9"
 
