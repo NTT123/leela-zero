@@ -67,15 +67,30 @@ def setupMemory(leename, num_instances):
     sm.close_fd()
 
     # Set up aliased names for the shared memory
-    mv  = np.frombuffer(mem, dtype=np.uint8, count=needed_memory_size);
+    mv = np.frombuffer(mem, dtype=np.uint8, count=needed_memory_size);
     counter    = mv[:counter_size]
-    input_mem  = mv[counter_size:counter_size + total_input_size]
-    output_mem = mv[counter_size + total_input_size + extra_size:]
+    input_mem  = mv[counter_size:counter_size + total_input_size].view(np.float32)
+    output_mem = mv[counter_size + total_input_size + extra_size:].view(np.float32)
 
     # reset all shared memory
     mv[:] = 0
 
     return counter, input_mem, output_mem
+
+
+def runNN(net, realbs, input_data, memout, smpA):
+    # t1 = time.perf_counter()
+    net[0].set_value(dt.reshape((realbs, INPUT_CHANNELS, BOARD_SIZE, BOARD_SIZE)))
+
+    qqq = net[1]().astype(np.float32)
+    ttt = qqq.reshape(realbs * OUTPUT_PREDICTIONS)
+
+    start_output = start_instance * INSTANCE_OUTPUT
+    end_output = end_instance * INSTANCE_OUTPUT
+    output_mem[start_output:end_output] = ttt
+
+    # t2 = time.perf_counter()
+    # print("delta run_nn = ", t2- t1)
 
 
 def main():
@@ -123,11 +138,10 @@ def main():
             #print("delta t1 = ", t1 - t2)
             #t1 = time.perf_counter()
 
-            start_input = start_instance * INSTANCE_INPUT_SIZE
-            end_input   = end_instance  * INSTANCE_INPUT_SIZE
+            start_input = start_instance * INSTANCE_INPUT
+            end_input   = end_instance  * INSTANCE_INPUT
             dt = np.frombuffer(input_mem[start_input:end_input],
-                               dtype=np.float32,
-                               count=INSTANCE_INPUTS)
+                               dtype=np.float32)
 
             nn.netlock.acquire(True)   # BLOCK HERE
             if nn.newNetWeight != None:
@@ -141,15 +155,7 @@ def main():
                 nn.newNetWeight = None
             nn.netlock.release()
 
-
-            net[0].set_value(dt.reshape( (realbs, 18, 19, 19) ) )
-
-            qqq = net[1]().astype(np.float32)
-            ttt = qqq.reshape(realbs * (19*19+2))
-
-            start_output = start_instance * INSTANCE_OUTPUT_SIZE
-            end_output = end_instance * INSTANCE_OUTPUT_SIZE
-            output_mem[start_output:end_output] = ttt.view(dtype=np.uint8)
+            runNN(net, realbs, dt, output_mem[start_output:end_output], smpA)
 
             for i in range(realbs):
                 smpA[start_instance + i].release() # send result to client
