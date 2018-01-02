@@ -127,7 +127,7 @@ def main():
             end_input   = end_instance  * INSTANCE_INPUT_SIZE
             dt = np.frombuffer(input_mem[start_input:end_input],
                                dtype=np.float32,
-                               count=INSTANCE_INPUTS)
+                               count=INSTANCE_INPUTS * realbs)
 
             nn.netlock.acquire(True)   # BLOCK HERE
             if nn.newNetWeight != None:
@@ -157,7 +157,7 @@ def main():
             #t2 = time.perf_counter()
             #print("delta t2 = ", t2- t1)
             #t2 = time.perf_counter()
-        
+
         # wait till all clients connected
         counter[2:] = 0 # reset bit masks
 
