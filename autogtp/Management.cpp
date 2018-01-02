@@ -190,7 +190,7 @@ Order Management::getWorkInternal() {
     prog_cmdline.append(".exe");
 #endif
     prog_cmdline.append(" -s -J");
-    prog_cmdline.append(" http://zero-test.sjeng.org/get-task/7");
+    prog_cmdline.append(" http://zero-test.sjeng.org/get-task/0");
 
     QTextStream(stdout) << prog_cmdline << endl;
 
@@ -260,6 +260,7 @@ Order Management::getWorkInternal() {
         o.parameters(parameters);
     }
     if (ob.value("cmd").toString() == "match") {
+        throw NetworkException("We don't support match games.");
         o.type(Order::Validation);
         QString net1 = ob.value("black_hash").toString();
         QString net2 = ob.value("white_hash").toString();
