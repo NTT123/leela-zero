@@ -21,8 +21,11 @@
 
 #include "Job.h"
 #include "Order.h"
+
 #include <QThread>
 #include <QMutex>
+
+class Management;
 
 class Worker : public QThread {
    Q_OBJECT
@@ -31,7 +34,7 @@ public:
         RUNNING = 0,
         FINISHING
     };
-    Worker(int index, const QString& gpuIndex,const QString& keep);
+    Worker(int index, const QString& gpuIndex, Management *parent);
     ~Worker() = default;
     void order(Order o);
     void doFinish() { m_job->finish(); m_state.store(FINISHING); }
@@ -41,10 +44,10 @@ signals:
 private:
     int m_index;
     QAtomicInt m_state;
-    QString m_keepPath;
     QString m_gpu;
     Order m_todo;
     Job *m_job;
+    Management *m_boss;
     void createJob(int type);
 };
 

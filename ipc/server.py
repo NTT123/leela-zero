@@ -61,7 +61,7 @@ def setupMemory(leename, num_instances):
         sm = ipc.SharedMemory(mem_name, flags=ipc.O_CREAT, size=shared_memory_size)
 
     # memory layout of the shared memory:
-    # | counter counter | input 1 | input 2 | .... |  8 bytes | output 1 | output 2| ..... |
+    # | counter counter | bit mask 1 | bit mask 2 | ... | input 1 | input 2 | ... | output 1 | output 2 | ... |
 
     mem = mmap.mmap(sm.fd, sm.size)
     sm.close_fd()
@@ -157,6 +157,9 @@ def main():
             #t2 = time.perf_counter()
             #print("delta t2 = ", t2- t1)
             #t2 = time.perf_counter()
+        
+        # wait till all clients connected
+        counter[2:] = 0 # reset bit masks
 
 if __name__ == "__main__":
     if len(sys.argv) != 3 :
@@ -164,4 +167,5 @@ if __name__ == "__main__":
         sys.exit(-1)
 
     main()
+
 
