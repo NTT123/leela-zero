@@ -1,7 +1,8 @@
-import time
+import gc
 import mmap
 import os
 import sys
+import time
 
 import posix_ipc as ipc
 import numpy as np
@@ -67,7 +68,7 @@ def setupMemory(leename, num_instances):
     sm.close_fd()
 
     # Set up aliased names for the shared memory
-    mv  = np.frombuffer(mem, dtype=np.uint8, count=needed_memory_size);
+    mv = np.frombuffer(mem, dtype=np.uint8, count=needed_memory_size);
     counter    = mv[:counter_size]
     input_mem  = mv[counter_size:counter_size + total_input_size]
     output_mem = mv[counter_size + total_input_size + extra_size:]
@@ -76,6 +77,33 @@ def setupMemory(leename, num_instances):
     mv[:] = 0
 
     return counter, input_mem, output_mem
+
+
+def runNN(net, realbs, input_data, smpA):
+    # t1 = time.perf_counter()
+    net[0].set_value(input_data.reshape((realbs, INPUT_CHANNELS, BOARD_SIZE, BOARD_SIZE)))
+
+    qqq = net[1]().astype(np.float32)
+    result = qqq.reshape(realbs * OUTPUT_PREDICTIONS)
+
+    # t2 = time.perf_counter()
+    # print("delta run_nn = ", t2- t1)
+
+    return result.view(np.uint8)
+
+
+def checkNewNN(nn):
+    nn.netlock.acquire(True)   # BLOCK HERE
+    if nn.newNetWeight != None:
+        nn.net = None
+        gc.collect()  # hope that GPU memory is freed, not sure :-()
+        weights, numBlocks, numFilters = nn.newNetWeight
+        print(" %d channels and %d blocks" % (numFilters, numBlocks) )
+        nn.net = nn.LZN(weights, numBlocks, numFilters)
+        print("...updated weight!")
+        nn.newNetWeight = None
+    nn.netlock.release()
+    return nn.net
 
 
 def main():
@@ -103,10 +131,6 @@ def main():
 
     print("Waiting for %d autogtp instances to run" % num_instances)
 
-    net = nn.net
-    import gc
-    import time
-
     #t2 = time.perf_counter()
     numiter = num_instances // realbs
     while True:
@@ -123,33 +147,16 @@ def main():
             #print("delta t1 = ", t1 - t2)
             #t1 = time.perf_counter()
 
-            start_input = start_instance * INSTANCE_INPUT_SIZE
-            end_input   = end_instance  * INSTANCE_INPUT_SIZE
+            start_input = start_instance * INSTANCE_INPUTS_SIZE
+            end_input   = end_instance  * INSTANCE_INPUTS_SIZE
             dt = np.frombuffer(input_mem[start_input:end_input],
                                dtype=np.float32,
                                count=INSTANCE_INPUTS * realbs)
-
-            nn.netlock.acquire(True)   # BLOCK HERE
-            if nn.newNetWeight != None:
-                nn.net = None
-                gc.collect()  # hope that GPU memory is freed, not sure :-()
-                weights, numBlocks, numFilters = nn.newNetWeight
-                print(" %d channels and %d blocks" % (numFilters, numBlocks) )
-                nn.net = nn.LZN(weights, numBlocks, numFilters)
-                net = nn.net
-                print("...updated weight!")
-                nn.newNetWeight = None
-            nn.netlock.release()
-
-
-            net[0].set_value(dt.reshape( (realbs, 18, 19, 19) ) )
-
-            qqq = net[1]().astype(np.float32)
-            ttt = qqq.reshape(realbs * (19*19+2))
+            net = checkNewNN(nn)
 
             start_output = start_instance * INSTANCE_OUTPUT_SIZE
             end_output = end_instance * INSTANCE_OUTPUT_SIZE
-            output_mem[start_output:end_output] = ttt.view(dtype=np.uint8)
+            output_mem[start_output:end_output] = runNN(net, realbs, dt, smpA)
 
             for i in range(realbs):
                 smpA[start_instance + i].release() # send result to client
