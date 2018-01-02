@@ -16,42 +16,43 @@
     along with Leela Zero.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <vector>
-#include <iostream>
-#include <fstream>
-#include <cstdlib>
-#include <cctype>
-#include <string>
-#include <sstream>
-#include <cmath>
-#include <climits>
-#include <algorithm>
-#include <random>
-#include <chrono>
-
 #include "config.h"
-#include "Utils.h"
-#include "GameState.h"
 #include "GTP.h"
-#include "UCTSearch.h"
-#include "UCTNode.h"
-#include "SGFTree.h"
+
+#include <algorithm>
+#include <cctype>
+#include <chrono>
+#include <cmath>
+#include <cstdlib>
+#include <exception>
+#include <fstream>
+#include <limits>
+#include <memory>
+#include <random>
+#include <string>
+#include <thread>
+#include <vector>
+
+#include "FastBoard.h"
+#include "FullBoard.h"
+#include "GameState.h"
 #include "Network.h"
-#include "TTable.h"
+#include "SGFTree.h"
 #include "Training.h"
+#include "UCTSearch.h"
+#include "Utils.h"
 
 using namespace Utils;
 
 // Configuration flags
 bool cfg_allow_pondering;
-int cfg_tcp_port;
 int cfg_num_threads;
 int cfg_max_playouts;
 int cfg_lagbuffer_cs;
 int cfg_resignpct;
 int cfg_noise;
 int cfg_random_cnt;
-uint64 cfg_rng_seed;
+std::uint64_t cfg_rng_seed;
 bool cfg_dumbpass;
 #ifdef USE_OPENCL
 std::vector<int> cfg_gpus;
@@ -68,8 +69,8 @@ extern int myid;
 
 void GTP::setup_default_parameters() {
     cfg_allow_pondering = true;
-    cfg_tcp_port = 9999;
-    cfg_num_threads = std::max(1, std::min(SMP::get_num_cpus(), MAX_CPUS));
+    int num_cpus = std::thread::hardware_concurrency();
+    cfg_num_threads = std::max(1, std::min(num_cpus, MAX_CPUS));
     cfg_max_playouts = std::numeric_limits<decltype(cfg_max_playouts)>::max();
     cfg_lagbuffer_cs = 100;
 #ifdef USE_OPENCL
@@ -90,9 +91,9 @@ void GTP::setup_default_parameters() {
     // helps when it *is* high quality (Linux, MSVC).
     std::random_device rd;
     std::ranlux48 gen(rd());
-    uint64 seed1 = (gen() << 16) ^ gen();
+    std::uint64_t seed1 = (gen() << 16) ^ gen();
     // If the above fails, this is one of our best, portable, bets.
-    uint64 seed2 = std::chrono::high_resolution_clock::
+    std::uint64_t seed2 = std::chrono::high_resolution_clock::
         now().time_since_epoch().count();
     cfg_rng_seed = seed1 ^ seed2;
 }
@@ -297,8 +298,10 @@ bool GTP::execute(GameState & game, std::string xinput) {
 
         return true;
     } else if (command.find("play") == 0) {
-        if (command.find("pass") != std::string::npos
-            || command.find("resign") != std::string::npos) {
+        if (command.find("resign") != std::string::npos) {
+            game.play_move(FastBoard::RESIGN);
+            gtp_printf(id, "");
+        } else if (command.find("pass") != std::string::npos) {
             game.play_pass();
             gtp_printf(id, "");
         } else {
@@ -350,7 +353,7 @@ bool GTP::execute(GameState & game, std::string xinput) {
             }
             if (cfg_allow_pondering) {
                 // now start pondering
-                if (game.get_last_move() != FastBoard::RESIGN) {
+                if (!game.has_resigned()) {
                     auto search = std::make_unique<UCTSearch>(game);
                     search->ponder();
                 }
@@ -388,7 +391,7 @@ bool GTP::execute(GameState & game, std::string xinput) {
             }
             if (cfg_allow_pondering) {
                 // now start pondering
-                if (game.get_last_move() != FastBoard::RESIGN) {
+                if (!game.has_resigned()) {
                     auto search = std::make_unique<UCTSearch>(game);
                     search->ponder();
                 }
@@ -407,17 +410,6 @@ bool GTP::execute(GameState & game, std::string xinput) {
     } else if (command.find("showboard") == 0) {
         gtp_printf(id, "");
         game.display_state();
-        return true;
-    } else if (command.find("mc_score") == 0) {
-        float ftmp = game.board.final_mc_score(game.get_komi());
-        /* white wins */
-        if (ftmp < -0.1) {
-            gtp_printf(id, "W+%3.1f", (float)fabs(ftmp));
-        } else if (ftmp > 0.1) {
-            gtp_printf(id, "B+%3.1f", ftmp);
-        } else {
-            gtp_printf(id, "0");
-        }
         return true;
     } else if (command.find("final_score") == 0) {
         float ftmp = game.final_score();
@@ -483,7 +475,7 @@ bool GTP::execute(GameState & game, std::string xinput) {
             if (cfg_allow_pondering) {
                 // KGS sends this after our move
                 // now start pondering
-                if (game.get_last_move() != FastBoard::RESIGN) {
+                if (!game.has_resigned()) {
                     auto search = std::make_unique<UCTSearch>(game);
                     search->ponder();
                 }
@@ -500,8 +492,7 @@ bool GTP::execute(GameState & game, std::string xinput) {
             game.play_move(move);
             game.display_state();
 
-        } while (game.get_passes() < 2
-                 && game.get_last_move() != FastBoard::RESIGN);
+        } while (game.get_passes() < 2 && !game.has_resigned());
 
         return true;
     } else if (command.find("go") == 0) {
@@ -719,8 +710,22 @@ bool GTP::execute(GameState & game, std::string xinput) {
         }
 
         Training::dump_training(who_won, filename);
-        filename += ".debug";
-        Training::dump_stats(filename);
+
+        if (!cmdstream.fail()) {
+            gtp_printf(id, "");
+        } else {
+            gtp_fail_printf(id, "syntax not understood");
+        }
+
+        return true;
+    } else if (command.find("dump_debug") == 0) {
+        std::istringstream cmdstream(command);
+        std::string tmp, filename;
+
+        // tmp will eat "dump_debug"
+        cmdstream >> tmp >> filename;
+
+        Training::dump_debug(filename);
 
         if (!cmdstream.fail()) {
             gtp_printf(id, "");
@@ -731,7 +736,7 @@ bool GTP::execute(GameState & game, std::string xinput) {
         return true;
     } else if (command.find("dump_supervised") == 0) {
         std::istringstream cmdstream(command);
-        std::string tmp, winner_color, sgfname, outname;
+        std::string tmp, sgfname, outname;
 
         // tmp will eat dump_supervised
         cmdstream >> tmp >> sgfname >> outname;

@@ -18,17 +18,15 @@
 #ifndef CONFIG_INCLUDED
 #define CONFIG_INCLUDED
 
-/*  Timing code. Define one or none of:
- *
- *  GETTICKCOUNT, GETTIMEOFDAY
+/*
+ * We need to check for input while we are thinking.
+ * That code isn't portable, so select something appropriate for the system.
  */
 #ifdef _WIN32
-#define GETTICKCOUNT
 #undef HAVE_SELECT
 #define NOMINMAX
 #else
 #define HAVE_SELECT
-#define GETTIMEOFDAY
 #endif
 
 /* Features */
@@ -38,7 +36,7 @@
 //#define USE_OPENCL
 //#define USE_TUNER
 #define USE_IPC
-// Remember to turn on USE_BLAS, USE_OPENBLAS (for Linux only) and USE_OPENCL when using USE_IPC_TEST
+// Remember to turn on USE_BLAS, USE_OPENBLAS and USE_OPENCL when using USE_IPC_TEST
 //#define USE_IPC_TEST
 
 #ifdef USE_IPC_TEST
@@ -62,46 +60,25 @@
 
 #define MAX_CPUS 1
 
-/* Integer types */
-
-typedef int int32;
-typedef short int16;
-typedef signed char int8;
-typedef unsigned int uint32;
-typedef unsigned short uint16;
-typedef unsigned char uint8;
-
-/* Data type definitions */
-
-#ifdef _WIN32
-typedef __int64 int64 ;
-typedef unsigned __int64 uint64;
-#else
-typedef long long int int64 ;
-typedef  unsigned long long int uint64;
-#endif
-
 #ifdef USE_HALF
+#ifndef USE_OPENCL
+#error "Half-precision not supported without OpenCL"
+#endif
 #include "half/half.hpp"
 using net_t = half_float::half;
 #else
 using net_t = float;
 #endif
 
+#if defined(USE_BLAS) && defined(USE_OPENCL) && !defined(USE_HALF)
+// If both BLAS and OpenCL are fully usable, then check the OpenCL
+// results against BLAS with some probability.
+#define USE_OPENCL_SELFCHECK
+#define SELFCHECK_PROBABILITY 2000
+#endif
+
 #if (_MSC_VER >= 1400) /* VC8+ Disable all deprecation warnings */
     #pragma warning(disable : 4996)
 #endif /* VC8+ */
-
-#ifdef GETTICKCOUNT
-    typedef int rtime_t;
-#else
-    #if defined(GETTIMEOFDAY)
-        #include <sys/time.h>
-        #include <time.h>
-        typedef struct timeval rtime_t;
-    #else
-        typedef time_t rtime_t;
-    #endif
-#endif
 
 #endif

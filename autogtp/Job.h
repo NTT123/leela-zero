@@ -22,7 +22,7 @@
 #include "Result.h"
 #include <QObject>
 #include <QAtomicInt>
-
+class Management;
 using VersionTuple = std::tuple<int, int>;
 
 class Job : public QObject {
@@ -36,7 +36,7 @@ public:
         Production = 0,
         Validation
     };
-    Job(QString gpu);
+    Job(QString gpu, Management *parent);
     ~Job() = default;
     virtual Result execute() = 0;
     virtual void init(const QMap<QString,QString> &l);
@@ -47,24 +47,26 @@ protected:
     QString m_option;
     QString m_gpu;
     VersionTuple m_leelazMinVersion;
+    Management *m_boss;
 };
 
 
-class ProdutionJob : public Job {
+class ProductionJob : public Job {
     Q_OBJECT
 public:
-    ProdutionJob(QString gpu);
-    ~ProdutionJob() = default;
+    ProductionJob(QString gpu, Management *parent);
+    ~ProductionJob() = default;
     void init(const QMap<QString,QString> &l);
     Result execute();
 private:
     QString m_network;
+    bool m_debug;
 };
 
 class ValidationJob : public Job {
     Q_OBJECT
 public:
-    ValidationJob(QString gpu);
+    ValidationJob(QString gpu, Management *parent);
     ~ValidationJob() = default;
     void init(const QMap<QString,QString> &l);
     Result execute();

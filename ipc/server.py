@@ -44,7 +44,7 @@ except Exception as ex:
     sm = ipc.SharedMemory( name, flags = ipc.O_CREAT, size = roundup(2 + num_instances + input_size*num_instances + 8  + num_instances*output_size, ipc.PAGE_SIZE) )
 
 # memory layout of the shared memory:
-# | counter counter | input 1 | input 2 | .... |  8 bytes | output 1 | output 2| ..... |
+# | counter counter | bit mask 1 | bit mask 2 | ... | input 1 | input 2 | ... | output 1 | output 2| ... |
 
 smp_counter =  createSMP("/%s_counter" % leename) # counter semaphore
 
@@ -130,4 +130,6 @@ while True:
         # t2 = time.perf_counter()
         # print("delta t2 = ", t2- t1)
         # t2 = time.perf_counter()
+
+    counter[2:] = 0 # reset bit masks
 
