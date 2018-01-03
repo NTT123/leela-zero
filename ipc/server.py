@@ -17,8 +17,8 @@ SIZE_OF_INT = 4
 OUTPUT_PREDICTIONS = BOARD_SQUARES + 2
 
 INSTANCE_INPUTS       = INPUT_CHANNELS * BOARD_SQUARES
-INSTANCE_INPUT_SIZE   = SIZE_OF_FLOAT * INSTANCE_INPUTS
-INSTANCE_OUTPUT_SIZE  = SIZE_OF_FLOAT * OUTPUT_PREDICTIONS
+INSTANCE_INPUTS_SIZE   = SIZE_OF_FLOAT * INSTANCE_INPUTS
+INSTANCE_OUTPUTS_SIZE  = SIZE_OF_FLOAT * OUTPUT_PREDICTIONS
 
 
 def roundup(size, page_size):
@@ -49,9 +49,9 @@ def setupMemory(leename, num_instances):
     mem_name = "/sm" + leename  # shared memory name
     # 2 counters + num_instance * (input + output)
     counter_size = 2 + num_instances
-    total_input_size  = num_instances * INSTANCE_INPUT_SIZE
+    total_input_size  = num_instances * INSTANCE_INPUTS_SIZE
     extra_size = 8
-    total_output_size = num_instances * INSTANCE_OUTPUT_SIZE
+    total_output_size = num_instances * INSTANCE_OUTPUTS_SIZE
 
     needed_memory_size = counter_size + total_input_size + extra_size + total_output_size
     shared_memory_size = roundup(needed_memory_size, ipc.PAGE_SIZE)
@@ -154,8 +154,8 @@ def main():
                                count=INSTANCE_INPUTS * realbs)
             net = checkNewNN(nn)
 
-            start_output = start_instance * INSTANCE_OUTPUT_SIZE
-            end_output = end_instance * INSTANCE_OUTPUT_SIZE
+            start_output = start_instance * INSTANCE_OUTPUTS_SIZE
+            end_output = end_instance * INSTANCE_OUTPUTS_SIZE
             output_mem[start_output:end_output] = runNN(net, realbs, dt, smpA)
 
             for i in range(realbs):
