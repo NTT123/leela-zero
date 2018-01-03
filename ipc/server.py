@@ -7,6 +7,8 @@ import time
 import posix_ipc as ipc
 import numpy as np
 
+from nn import TheanoLZN
+
 BOARD_SIZE = 19
 BOARD_SQUARES = BOARD_SIZE ** 2
 INPUT_CHANNELS = 18
@@ -79,31 +81,16 @@ def setupMemory(leename, num_instances):
     return counter, input_mem, output_mem
 
 
-def runNN(net, realbs, input_data, smpA):
+def runNN(net, batch_size, input_data, smpA):
     # t1 = time.perf_counter()
-    net[0].set_value(input_data.reshape((realbs, INPUT_CHANNELS, BOARD_SIZE, BOARD_SIZE)))
 
-    qqq = net[1]().astype(np.float32)
-    result = qqq.reshape(realbs * OUTPUT_PREDICTIONS)
+    qqq = net.runNN(input_data)
+    result = qqq.reshape(batch_size * OUTPUT_PREDICTIONS)
 
     # t2 = time.perf_counter()
     # print("delta run_nn = ", t2- t1)
 
     return result.view(np.uint8)
-
-
-def checkNewNN(nn):
-    nn.netlock.acquire(True)   # BLOCK HERE
-    if nn.newNetWeight != None:
-        nn.net = None
-        gc.collect()  # hope that GPU memory is freed, not sure :-()
-        weights, numBlocks, numFilters = nn.newNetWeight
-        print(" %d channels and %d blocks" % (numFilters, numBlocks) )
-        nn.net = nn.LZN(weights, numBlocks, numFilters)
-        print("...updated weight!")
-        nn.newNetWeight = None
-    nn.netlock.release()
-    return nn.net
 
 
 def main():
@@ -122,7 +109,7 @@ def main():
     counter, input_mem, output_mem = setupMemory(leename, num_instances)
     smp_counter, smpA, smpB = createCounters(leename, num_instances)
 
-    import nn # import our neural network
+    net = TheanoLZN(realbs)
 
     counter[0] = num_instances // 256   # num_instances = counter0 * 256 + counter1
     counter[1] = num_instances %  256
@@ -152,7 +139,6 @@ def main():
             dt = np.frombuffer(input_mem[start_input:end_input],
                                dtype=np.float32,
                                count=INSTANCE_INPUTS * realbs)
-            net = checkNewNN(nn)
 
             start_output = start_instance * INSTANCE_OUTPUTS_SIZE
             end_output = end_instance * INSTANCE_OUTPUTS_SIZE
